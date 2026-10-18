@@ -145,6 +145,7 @@ class SoundAndHaptics {
     const triggerFinishedOnce = () => {
       if (finished) return;
       finished = true;
+      this.stopStoredGreeting();
       onFinished();
     };
 

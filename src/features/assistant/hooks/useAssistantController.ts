@@ -75,6 +75,17 @@ export function useAssistantController() {
   const isMutedRef = useRef<boolean>(false);
   const pendingMicPromiseRef = useRef<Promise<MediaStream> | null>(null);
 
+  const updatePhase = useCallback((newPhase: InteractionPhase) => {
+    phaseRef.current = newPhase;
+    setPhase(newPhase);
+  }, []);
+
+  const isStreamAlive = useCallback((s: MediaStream | null): boolean => {
+    if (!s || !s.active) return false;
+    const tracks = s.getAudioTracks();
+    return tracks.length > 0 && tracks.some((t) => t.readyState === "live");
+  }, []);
+
   useEffect(() => {
     phaseRef.current = phase;
   }, [phase]);
@@ -115,7 +126,7 @@ export function useAssistantController() {
         videoRef.current.srcObject !== cameraStreamRef.current
       ) {
         videoRef.current.srcObject = cameraStreamRef.current;
-        await videoRef.current.play().catch(() => {});
+        await videoRef.current.play().catch(() => { });
       }
       return cameraStreamRef.current;
     }
@@ -134,7 +145,7 @@ export function useAssistantController() {
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        await videoRef.current.play().catch(() => {});
+        await videoRef.current.play().catch(() => { });
       }
       return stream;
     } catch (err) {
@@ -281,12 +292,12 @@ export function useAssistantController() {
     liveTranscriptRef.current = "";
     setLiveTranscript("");
     soundFX.playStopChime();
-    setPhase("IDLE");
+    updatePhase("IDLE");
     setStatusMessage("Interaction Stopped");
     setSubStatusText(
       "Tap 1x anywhere to speak with AI, or double-tap (2x) anywhere to take a picture."
     );
-  }, [stopAllAudioAndListening]);
+  }, [stopAllAudioAndListening, updatePhase]);
 
   const playSpokenAudio = useCallback(
     async (
@@ -387,7 +398,7 @@ export function useAssistantController() {
         stopAllAudioAndListening(false);
         isSubmittingVoiceRef.current = false;
         hasUserSpokenRef.current = false;
-        setPhase("IDLE");
+        updatePhase("IDLE");
         setStatusMessage("Tap once to speak, or double-tap to take a picture");
         setSubStatusText(
           "Tap 1x anywhere to greet the AI by voice, or double-tap (2x) anywhere to capture a photo."
@@ -403,18 +414,18 @@ export function useAssistantController() {
       let capturedImageBase64 = "";
 
       if (shouldCaptureCamera) {
-        setPhase("CAPTURING_CAMERA");
+        updatePhase("CAPTURING_CAMERA");
         setStatusMessage("Capturing photo...");
         setSubStatusText("Tap anywhere on the screen if you wish to cancel");
         capturedImageBase64 = await activateCameraAndCaptureSnapshot();
         if (controller.signal.aborted) return;
 
-        setPhase("PROCESSING_AI");
+        updatePhase("PROCESSING_AI");
         setStatusMessage("Processing image");
         setSubStatusText("AI is analyzing the objects in front of you...");
         soundFX.playStoredProcessingImage(isMutedRef.current);
       } else {
-        setPhase("PROCESSING_AI");
+        updatePhase("PROCESSING_AI");
         setStatusMessage("Processing answer");
         setSubStatusText(
           cleanedUserText
@@ -459,7 +470,7 @@ export function useAssistantController() {
           stopAllAudioAndListening(false);
           isSubmittingVoiceRef.current = false;
           hasUserSpokenRef.current = false;
-          setPhase("IDLE");
+          updatePhase("IDLE");
           setStatusMessage(
             "Tap once to speak, or double-tap to take a picture"
           );
@@ -471,13 +482,13 @@ export function useAssistantController() {
 
         if (data.requiresCameraCapture) {
           shouldCaptureCamera = true;
-          setPhase("CAPTURING_CAMERA");
+          updatePhase("CAPTURING_CAMERA");
           setStatusMessage("Turning on camera & taking picture...");
           setSubStatusText(`Voice command: "${data.userTranscript}"`);
           capturedImageBase64 = await activateCameraAndCaptureSnapshot();
           if (controller.signal.aborted) return;
 
-          setPhase("PROCESSING_AI");
+          updatePhase("PROCESSING_AI");
           setStatusMessage("Processing image");
           setSubStatusText("AI is analyzing the objects in front of you...");
           soundFX.playStoredProcessingImage(isMutedRef.current);
@@ -524,7 +535,7 @@ export function useAssistantController() {
         setLogs((prev) => [newEntry, ...prev.slice(0, 9)]);
         setLiveTranscript("");
         liveTranscriptRef.current = "";
-        setPhase("SPEAKING_RESPONSE");
+        updatePhase("SPEAKING_RESPONSE");
         setStatusMessage(newEntry.summaryTitle);
         setSubStatusText(newEntry.spokenResponse);
         soundFX.playSuccessChime();
@@ -537,7 +548,7 @@ export function useAssistantController() {
               stopAllAudioAndListening(false);
               isSubmittingVoiceRef.current = false;
               hasUserSpokenRef.current = false;
-              setPhase("IDLE");
+              updatePhase("IDLE");
               setStatusMessage(
                 "Tap once to speak, or double-tap to take a picture"
               );
@@ -554,11 +565,11 @@ export function useAssistantController() {
         console.error("AI Assist error:", err);
         const fallbackMsg =
           "Sorry, there was a connection issue reaching the AI. Please tap the screen to try again.";
-        setPhase("SPEAKING_RESPONSE");
+        updatePhase("SPEAKING_RESPONSE");
         setStatusMessage("Connection Issue");
         setSubStatusText(fallbackMsg);
         await playSpokenAudio(fallbackMsg, null, () => {
-          setPhase("IDLE");
+          updatePhase("IDLE");
           setStatusMessage(
             "Tap once to speak, or double-tap to take a picture"
           );
@@ -572,6 +583,7 @@ export function useAssistantController() {
       activateCameraAndCaptureSnapshot,
       playSpokenAudio,
       stopAllAudioAndListening,
+      updatePhase,
     ]
   );
 
@@ -630,7 +642,7 @@ export function useAssistantController() {
       hasUserSpokenRef.current = false;
       liveTranscriptRef.current = "";
       setLiveTranscript("");
-      setPhase("IDLE");
+      updatePhase("IDLE");
       setStatusMessage("Tap once to speak, or double-tap to take a picture");
       setSubStatusText(
         "Tap 1x anywhere to greet the AI by voice, or double-tap (2x) anywhere to capture a photo."
@@ -690,7 +702,7 @@ export function useAssistantController() {
             } else {
               isSubmittingVoiceRef.current = false;
               hasUserSpokenRef.current = false;
-              setPhase("IDLE");
+              updatePhase("IDLE");
               setStatusMessage(
                 "Tap once to speak, or double-tap to take a picture"
               );
@@ -700,7 +712,7 @@ export function useAssistantController() {
         } else {
           isSubmittingVoiceRef.current = false;
           hasUserSpokenRef.current = false;
-          setPhase("IDLE");
+          updatePhase("IDLE");
           setStatusMessage("Tap once to speak, or double-tap to take a picture");
         }
       };
@@ -722,9 +734,9 @@ export function useAssistantController() {
 
     isSubmittingVoiceRef.current = false;
     hasUserSpokenRef.current = false;
-    setPhase("IDLE");
+    updatePhase("IDLE");
     setStatusMessage("Tap once to speak, or double-tap to take a picture");
-  }, [processUserIntent]);
+  }, [processUserIntent, updatePhase]);
 
   const startListeningForUserIntent = useCallback(async () => {
     // Keep mic stream alive across transition so phone hardware does not need to renegotiate!
@@ -734,14 +746,14 @@ export function useAssistantController() {
     liveTranscriptRef.current = "";
     setLiveTranscript("");
     setMicError(null);
-    setPhase("LISTENING_VOICE");
+    updatePhase("LISTENING_VOICE");
     setStatusMessage("Listening to your voice...");
     setSubStatusText(
       'Ask the AI anything, or say "Take a picture" if you want to use the camera'
     );
     soundFX.playListeningStart();
 
-    const resetNoQuestionTimer = (timeoutMs = 4000) => {
+    const resetNoQuestionTimer = (timeoutMs = 7000) => {
       if (maxListenTimerRef.current) {
         clearTimeout(maxListenTimerRef.current);
       }
@@ -757,7 +769,7 @@ export function useAssistantController() {
             finishVoiceRecordingAndSubmit();
           } else {
             stopAllAudioAndListening(false);
-            setPhase("IDLE");
+            updatePhase("IDLE");
             setStatusMessage(
               "Tap once to speak, or double-tap to take a picture"
             );
@@ -768,8 +780,6 @@ export function useAssistantController() {
         }
       }, timeoutMs);
     };
-
-    resetNoQuestionTimer(4000);
 
     const scheduleAutoSubmitAfterPause = (delayMs = 1350) => {
       if (silenceDebounceTimerRef.current) {
@@ -789,7 +799,7 @@ export function useAssistantController() {
 
     // 1. Instantly use existing primed mic stream, or resolve pending promise
     let stream = micStreamRef.current;
-    if (!stream || !stream.active) {
+    if (!isStreamAlive(stream)) {
       if (pendingMicPromiseRef.current) {
         try {
           stream = await pendingMicPromiseRef.current;
@@ -800,7 +810,7 @@ export function useAssistantController() {
       }
     }
 
-    if (!stream || !stream.active) {
+    if (!isStreamAlive(stream)) {
       try {
         if (navigator.mediaDevices?.getUserMedia) {
           stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -821,7 +831,10 @@ export function useAssistantController() {
       return;
     }
 
-    // 2. Immediately start MediaRecorder recording from frame 0 (zero lag)
+    // 2. Start timeout timer AFTER stream is verified and ready
+    resetNoQuestionTimer(7000);
+
+    // 3. Immediately start MediaRecorder recording from frame 0 (zero lag)
     if (stream) {
       try {
         audioChunksRef.current = [];
@@ -841,7 +854,7 @@ export function useAssistantController() {
         console.warn("MediaRecorder init error:", recErr);
       }
 
-      // 3. Connect Web Audio analyser for instant VAD (zero deadzone)
+      // 4. Connect Web Audio analyser for instant VAD
       try {
         const AudioCtx =
           window.AudioContext ||
@@ -852,7 +865,7 @@ export function useAssistantController() {
         }
         const audioCtx = audioContextRef.current;
         if (audioCtx.state === "suspended") {
-          await audioCtx.resume().catch(() => {});
+          await audioCtx.resume().catch(() => { });
         }
 
         const source = audioCtx.createMediaStreamSource(stream);
@@ -862,6 +875,7 @@ export function useAssistantController() {
         source.connect(analyser);
 
         const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        const listenStartTime = Date.now();
         let voiceActiveFrames = 0;
         let lastVoiceTime = Date.now();
 
@@ -884,14 +898,14 @@ export function useAssistantController() {
           setMicLevel(normalizedLevel);
 
           const now = Date.now();
-          // Zero deadzone: immediately capture when user speaks
-          if (avg > 8) {
+          // Deadzone of 300ms prevents start chime / echo from triggering VAD
+          if (now - listenStartTime > 300 && avg > 14) {
             voiceActiveFrames += 1;
             lastVoiceTime = now;
 
-            if (voiceActiveFrames >= 2 && !hasUserSpokenRef.current) {
+            if (voiceActiveFrames >= 3 && !hasUserSpokenRef.current) {
               hasUserSpokenRef.current = true;
-              resetNoQuestionTimer(6000);
+              resetNoQuestionTimer(7000);
             }
           }
 
@@ -913,7 +927,7 @@ export function useAssistantController() {
       }
     }
 
-    // 4. Optionally launch SpeechRecognition in parallel without blocking recorder
+    // 5. Optionally launch SpeechRecognition in parallel without blocking recorder
     const SpeechRecognition =
       (window as any).SpeechRecognition ||
       (window as any).webkitSpeechRecognition;
@@ -939,7 +953,7 @@ export function useAssistantController() {
             hasUserSpokenRef.current = true;
             liveTranscriptRef.current = cleaned;
             setLiveTranscript(cleaned);
-            resetNoQuestionTimer(6000);
+            resetNoQuestionTimer(7000);
             scheduleAutoSubmitAfterPause(hasFinalPiece ? 1000 : 1500);
           }
         };
@@ -953,6 +967,7 @@ export function useAssistantController() {
           }
         };
 
+        let restartCount = 0;
         recognition.onend = () => {
           if (
             phaseRef.current === "LISTENING_VOICE" &&
@@ -960,7 +975,8 @@ export function useAssistantController() {
           ) {
             if (liveTranscriptRef.current.trim().length > 0) {
               finishVoiceRecordingAndSubmit();
-            } else {
+            } else if (restartCount < 2) {
+              restartCount++;
               try {
                 recognition.start();
               } catch {
@@ -975,18 +991,18 @@ export function useAssistantController() {
         console.warn("SpeechRecognition start warning:", e);
       }
     }
-  }, [finishVoiceRecordingAndSubmit, stopAllAudioAndListening]);
+  }, [finishVoiceRecordingAndSubmit, isStreamAlive, stopAllAudioAndListening, updatePhase]);
 
   const startAiGreetingAndAskUser = useCallback(() => {
     // 1. Immediately update UI state (zero lag)
-    setPhase("ASKING_INTENT");
+    updatePhase("ASKING_INTENT");
     setStatusMessage("Hi there.");
     setSubStatusText(
       "Speak directly to ask a question, or double-tap (2x) anywhere to take a picture."
     );
 
     // 2. Ensure microphone is warm in background if not already active
-    if (!micStreamRef.current || !micStreamRef.current.active) {
+    if (!isStreamAlive(micStreamRef.current)) {
       if (!pendingMicPromiseRef.current && navigator.mediaDevices?.getUserMedia) {
         pendingMicPromiseRef.current = navigator.mediaDevices
           .getUserMedia({ audio: true })
@@ -1008,7 +1024,7 @@ export function useAssistantController() {
         startListeningForUserIntent();
       }
     });
-  }, [startListeningForUserIntent]);
+  }, [isStreamAlive, startListeningForUserIntent, updatePhase]);
 
   const startCameraAimingShortcut = useCallback(() => {
     stopAllAudioAndListening(false);
@@ -1024,18 +1040,17 @@ export function useAssistantController() {
     if (pendingMicPromiseRef.current) {
       pendingMicPromiseRef.current
         .then((s) => s.getTracks().forEach((t) => t.stop()))
-        .catch(() => {});
+        .catch(() => { });
       pendingMicPromiseRef.current = null;
     }
 
-    setPhase("AIMING_CAMERA");
-    phaseRef.current = "AIMING_CAMERA";
+    updatePhase("AIMING_CAMERA");
     setStatusMessage("Point Your Camera");
     setSubStatusText(POINT_CAMERA_INSTRUCTION_TEXT);
 
     startLiveCameraStream();
     soundFX.playStoredPointCameraPrompt(isMutedRef.current);
-  }, [startLiveCameraStream, stopAllAudioAndListening]);
+  }, [startLiveCameraStream, stopAllAudioAndListening, updatePhase]);
 
   const triggerScreenGestureAction = useCallback(() => {
     if (phaseRef.current === "AIMING_CAMERA") {
@@ -1075,7 +1090,7 @@ export function useAssistantController() {
       if (
         typeof navigator !== "undefined" &&
         navigator.mediaDevices?.getUserMedia &&
-        (!micStreamRef.current || !micStreamRef.current.active)
+        !isStreamAlive(micStreamRef.current)
       ) {
         try {
           const micPromise = navigator.mediaDevices.getUserMedia({ audio: true });
@@ -1111,6 +1126,7 @@ export function useAssistantController() {
     }, 200);
   }, [
     haltAllProcessesAndReturnToIdle,
+    isStreamAlive,
     processUserIntent,
     startAiGreetingAndAskUser,
     startCameraAimingShortcut,
