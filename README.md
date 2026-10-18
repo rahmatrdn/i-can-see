@@ -184,8 +184,11 @@ Open `http://localhost:3000`.
 ## Docker
 
 ```bash
-# User App (build context is the repository root)
-docker build -f _app-service/Dockerfile -t icansee-app .
+# User App (default: build context _app-service)
+docker build -t icansee-app _app-service
+
+# User App (jika build context dari root repository)
+docker build -f _app-service/Dockerfile --build-arg SERVICE_DIR=_app-service -t icansee-app .
 
 # Portal (build context is the repository root)
 docker build -f _portal-service/Dockerfile -t icansee-portal .

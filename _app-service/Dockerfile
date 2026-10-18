@@ -1,9 +1,9 @@
-ARG SERVICE_DIR=_app-service
+ARG SERVICE_DIR=.
 
 # Stage 1: Build stage
 FROM oven/bun:1.4.3-slim AS builder
 
-ARG SERVICE_DIR=_app-service
+ARG SERVICE_DIR=.
 
 WORKDIR /app
 
@@ -22,7 +22,7 @@ RUN bun run build
 # Stage 2: Production runtime stage
 FROM oven/bun:1.4.3-slim AS runner
 
-ARG SERVICE_DIR=_app-service
+ARG SERVICE_DIR=.
 
 WORKDIR /app
 
