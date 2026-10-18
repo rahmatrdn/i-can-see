@@ -1,0 +1,6 @@
+{
+  "name": "iCanSee",
+  "description": "Voice-first AI visual assistant for blind and low-vision users. Tap anywhere on the screen to converse by voice or capture and describe what is in front of the camera.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

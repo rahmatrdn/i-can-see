@@ -1,0 +1,151 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: #090D16;
+    color: #F8FAFC;
+    overflow-x: hidden;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  code, pre, .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@keyframes ripple-expand {
+  0% {
+    transform: scale(0.3);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(2.8);
+    opacity: 0;
+  }
+}
+
+.animate-ripple {
+  animation: ripple-expand 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Smooth organic acoustic wave rings around the center orb */
+@keyframes orb-smooth-wave {
+  0% {
+    transform: scale(0.88);
+    opacity: 0.65;
+  }
+  50% {
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(1.95);
+    opacity: 0;
+  }
+}
+
+.animate-orb-wave-1 {
+  animation: orb-smooth-wave 3.2s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.animate-orb-wave-2 {
+  animation: orb-smooth-wave 3.2s cubic-bezier(0.22, 1, 0.36, 1) 1.05s infinite;
+}
+
+.animate-orb-wave-3 {
+  animation: orb-smooth-wave 3.2s cubic-bezier(0.22, 1, 0.36, 1) 2.1s infinite;
+}
+
+/* Faster, energetic smooth wave when AI is actively speaking */
+@keyframes orb-speaking-wave {
+  0% {
+    transform: scale(0.92);
+    opacity: 0.8;
+  }
+  60% {
+    opacity: 0.35;
+  }
+  100% {
+    transform: scale(2.15);
+    opacity: 0;
+  }
+}
+
+.animate-speaking-wave-1 {
+  animation: orb-speaking-wave 2.1s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+.animate-speaking-wave-2 {
+  animation: orb-speaking-wave 2.1s cubic-bezier(0.16, 1, 0.3, 1) 0.7s infinite;
+}
+
+.animate-speaking-wave-3 {
+  animation: orb-speaking-wave 2.1s cubic-bezier(0.16, 1, 0.3, 1) 1.4s infinite;
+}
+
+/* Pure circular concentric smooth wave aura behind the center circle */
+@keyframes orb-circular-aura {
+  0%, 100% {
+    transform: scale(0.96);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scale(1.16);
+    opacity: 0.85;
+  }
+}
+
+.animate-orb-morph {
+  animation: orb-circular-aura 3.6s ease-in-out infinite;
+}
+
+.animate-orb-morph-reverse {
+  animation: orb-circular-aura 3.6s ease-in-out 1.8s infinite;
+}
+
+/* Soft breathing pulse for idle orb */
+@keyframes orb-breathe {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.045);
+  }
+}
+
+.animate-orb-breathe {
+  animation: orb-breathe 3.6s ease-in-out infinite;
+}
+
+@keyframes ai-voice-bar {
+  0%, 100% {
+    transform: scaleY(0.28);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.animate-voice-bar-1 {
+  animation: ai-voice-bar 0.55s ease-in-out infinite;
+}
+.animate-voice-bar-2 {
+  animation: ai-voice-bar 0.45s ease-in-out 0.12s infinite;
+}
+.animate-voice-bar-3 {
+  animation: ai-voice-bar 0.65s ease-in-out 0.24s infinite;
+}
+.animate-voice-bar-4 {
+  animation: ai-voice-bar 0.5s ease-in-out 0.08s infinite;
+}
+.animate-voice-bar-5 {
+  animation: ai-voice-bar 0.6s ease-in-out 0.18s infinite;
+}
+.animate-voice-bar-6 {
+  animation: ai-voice-bar 0.48s ease-in-out 0.28s infinite;
+}
+.animate-voice-bar-7 {
+  animation: ai-voice-bar 0.58s ease-in-out 0.15s infinite;
+}
