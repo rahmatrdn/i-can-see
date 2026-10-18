@@ -131,14 +131,35 @@ class SoundAndHaptics {
 
   /**
    * Plays stored/local "/audio/hello.mp3" ("Hi there.") audio file immediately.
+   * Seamlessly triggers callback right as the speech vocalization finishes (~720ms)
+   * to eliminate mobile MP3 tail silence lag and start listening with zero dead delay.
    */
   public playStoredHelloGreeting(isMuted: boolean, onFinished: () => void) {
     this.vibrate([40, 30, 60]);
+    if (isMuted) {
+      setTimeout(onFinished, 50);
+      return;
+    }
+
+    let finished = false;
+    const triggerFinishedOnce = () => {
+      if (finished) return;
+      finished = true;
+      onFinished();
+    };
+
+    // The speech vocalization "Hi there." finishes at ~720ms.
+    // Triggering listening at 720ms eliminates the tail silence lag on mobile browsers!
+    const earlyTimer = setTimeout(triggerFinishedOnce, 720);
+
     this.playStaticAudioFile(
       this.helloAudio,
       "/audio/hello.mp3?v=3",
       isMuted,
-      onFinished
+      () => {
+        clearTimeout(earlyTimer);
+        triggerFinishedOnce();
+      }
     );
   }
 
@@ -194,15 +215,15 @@ class SoundAndHaptics {
     this.playTone(ctx, 392.0, now + 0.08, 0.15, "sine", 0.18); // G4
   }
 
-  // Soft high chime when microphone starts listening
+  // Soft quick chime when microphone starts listening
   public playListeningStart() {
-    this.vibrate(50);
+    this.vibrate(40);
     const ctx = this.getContext();
     if (!ctx) return;
 
     const now = ctx.currentTime;
-    this.playTone(ctx, 587.33, now, 0.08, "sine", 0.14); // D5
-    this.playTone(ctx, 880.0, now + 0.08, 0.15, "sine", 0.16); // A5
+    this.playTone(ctx, 659.25, now, 0.05, "sine", 0.08); // E5
+    this.playTone(ctx, 880.0, now + 0.05, 0.08, "sine", 0.09); // A5
   }
 
   /**

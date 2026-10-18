@@ -204,7 +204,7 @@ export function useAssistantController() {
   }, [startLiveCameraStream, stopCameraStream]);
 
   const stopAllAudioAndListening = useCallback(
-    (keepCameraOpen = false) => {
+    (keepCameraOpen = false, keepMicStreamOpen = false) => {
       if (abortControllerRef.current) {
         try {
           abortControllerRef.current.abort();
@@ -262,7 +262,7 @@ export function useAssistantController() {
       }
       mediaRecorderRef.current = null;
 
-      if (micStreamRef.current) {
+      if (!keepMicStreamOpen && micStreamRef.current) {
         micStreamRef.current.getTracks().forEach((t) => t.stop());
         micStreamRef.current = null;
       }
@@ -727,7 +727,8 @@ export function useAssistantController() {
   }, [processUserIntent]);
 
   const startListeningForUserIntent = useCallback(async () => {
-    stopAllAudioAndListening(false);
+    // Keep mic stream alive across transition so phone hardware does not need to renegotiate!
+    stopAllAudioAndListening(false, true);
     isSubmittingVoiceRef.current = false;
     hasUserSpokenRef.current = false;
     liveTranscriptRef.current = "";
@@ -786,6 +787,133 @@ export function useAssistantController() {
       }, delayMs);
     };
 
+    // 1. Instantly use existing primed mic stream, or resolve pending promise
+    let stream = micStreamRef.current;
+    if (!stream || !stream.active) {
+      if (pendingMicPromiseRef.current) {
+        try {
+          stream = await pendingMicPromiseRef.current;
+          micStreamRef.current = stream;
+        } catch {
+          stream = null;
+        }
+      }
+    }
+
+    if (!stream || !stream.active) {
+      try {
+        if (navigator.mediaDevices?.getUserMedia) {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          micStreamRef.current = stream;
+        }
+      } catch (err: any) {
+        console.warn("Microphone getUserMedia warning:", err);
+        setMicError(
+          "Microphone permission is not enabled. On iPhone: Go to iPhone Settings > Safari > Microphone > Allow."
+        );
+        setStatusMessage("Microphone Permission Needed");
+        return;
+      }
+    }
+
+    if (phaseRef.current !== "LISTENING_VOICE") {
+      if (stream) stream.getTracks().forEach((t) => t.stop());
+      return;
+    }
+
+    // 2. Immediately start MediaRecorder recording from frame 0 (zero lag)
+    if (stream) {
+      try {
+        audioChunksRef.current = [];
+        const supportedMime = getSupportedAudioMimeType();
+        const recorder = supportedMime
+          ? new MediaRecorder(stream, { mimeType: supportedMime })
+          : new MediaRecorder(stream);
+
+        mediaRecorderRef.current = recorder;
+        recorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) {
+            audioChunksRef.current.push(e.data);
+          }
+        };
+        recorder.start(200);
+      } catch (recErr) {
+        console.warn("MediaRecorder init error:", recErr);
+      }
+
+      // 3. Connect Web Audio analyser for instant VAD (zero deadzone)
+      try {
+        const AudioCtx =
+          window.AudioContext ||
+          (window as unknown as { webkitAudioContext: typeof AudioContext })
+            .webkitAudioContext;
+        if (!audioContextRef.current) {
+          audioContextRef.current = new AudioCtx();
+        }
+        const audioCtx = audioContextRef.current;
+        if (audioCtx.state === "suspended") {
+          await audioCtx.resume().catch(() => {});
+        }
+
+        const source = audioCtx.createMediaStreamSource(stream);
+        const analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 512;
+        analyser.smoothingTimeConstant = 0.3;
+        source.connect(analyser);
+
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        let voiceActiveFrames = 0;
+        let lastVoiceTime = Date.now();
+
+        const checkVolumeLoop = () => {
+          if (
+            phaseRef.current !== "LISTENING_VOICE" ||
+            isSubmittingVoiceRef.current
+          ) {
+            setMicLevel(0);
+            return;
+          }
+
+          analyser.getByteFrequencyData(dataArray);
+          let sum = 0;
+          for (let i = 0; i < dataArray.length; i++) {
+            sum += dataArray[i];
+          }
+          const avg = sum / dataArray.length;
+          const normalizedLevel = Math.min(100, Math.round((avg / 50) * 100));
+          setMicLevel(normalizedLevel);
+
+          const now = Date.now();
+          // Zero deadzone: immediately capture when user speaks
+          if (avg > 8) {
+            voiceActiveFrames += 1;
+            lastVoiceTime = now;
+
+            if (voiceActiveFrames >= 2 && !hasUserSpokenRef.current) {
+              hasUserSpokenRef.current = true;
+              resetNoQuestionTimer(6000);
+            }
+          }
+
+          if (
+            (hasUserSpokenRef.current ||
+              liveTranscriptRef.current.trim().length > 0) &&
+            now - lastVoiceTime > 1350
+          ) {
+            finishVoiceRecordingAndSubmit();
+            return;
+          }
+
+          vadAnimationRef.current = requestAnimationFrame(checkVolumeLoop);
+        };
+
+        vadAnimationRef.current = requestAnimationFrame(checkVolumeLoop);
+      } catch {
+        // Ignore AudioContext analyser errors
+      }
+    }
+
+    // 4. Optionally launch SpeechRecognition in parallel without blocking recorder
     const SpeechRecognition =
       (window as any).SpeechRecognition ||
       (window as any).webkitSpeechRecognition;
@@ -836,7 +964,7 @@ export function useAssistantController() {
               try {
                 recognition.start();
               } catch {
-                // ignore if already started or stopped by 4s timer
+                // ignore
               }
             }
           }
@@ -847,156 +975,34 @@ export function useAssistantController() {
         console.warn("SpeechRecognition start warning:", e);
       }
     }
-
-    let stream = micStreamRef.current;
-    if (!stream || !stream.active) {
-      if (pendingMicPromiseRef.current) {
-        try {
-          stream = await pendingMicPromiseRef.current;
-          micStreamRef.current = stream;
-        } catch {
-          stream = null;
-        }
-      }
-    }
-
-    if (!stream || !stream.active) {
-      try {
-        if (navigator.mediaDevices?.getUserMedia) {
-          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          micStreamRef.current = stream;
-        }
-      } catch (err: any) {
-        console.warn("Microphone getUserMedia warning:", err);
-        setMicError(
-          "Microphone permission is not enabled. On iPhone: Go to iPhone Settings > Safari > Microphone > Allow."
-        );
-        setStatusMessage("Microphone Permission Needed");
-        return;
-      }
-    }
-
-    if (phaseRef.current !== "LISTENING_VOICE") {
-      if (stream) stream.getTracks().forEach((t) => t.stop());
-      return;
-    }
-
-    if (stream) {
-      try {
-        audioChunksRef.current = [];
-        const supportedMime = getSupportedAudioMimeType();
-        const recorder = supportedMime
-          ? new MediaRecorder(stream, { mimeType: supportedMime })
-          : new MediaRecorder(stream);
-
-        mediaRecorderRef.current = recorder;
-        recorder.ondataavailable = (e) => {
-          if (e.data && e.data.size > 0) {
-            audioChunksRef.current.push(e.data);
-          }
-        };
-        recorder.start(250);
-      } catch (recErr) {
-        console.warn("MediaRecorder init error:", recErr);
-      }
-
-      try {
-        const AudioCtx =
-          window.AudioContext ||
-          (window as unknown as { webkitAudioContext: typeof AudioContext })
-            .webkitAudioContext;
-        if (!audioContextRef.current) {
-          audioContextRef.current = new AudioCtx();
-        }
-        const audioCtx = audioContextRef.current;
-        if (audioCtx.state === "suspended") {
-          await audioCtx.resume().catch(() => {});
-        }
-
-        const source = audioCtx.createMediaStreamSource(stream);
-        const analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 512;
-        analyser.smoothingTimeConstant = 0.4;
-        source.connect(analyser);
-
-        const dataArray = new Uint8Array(analyser.frequencyBinCount);
-        const listenStartTime = Date.now();
-        let voiceActiveFrames = 0;
-        let lastVoiceTime = Date.now();
-
-        const checkVolumeLoop = () => {
-          if (
-            phaseRef.current !== "LISTENING_VOICE" ||
-            isSubmittingVoiceRef.current
-          ) {
-            setMicLevel(0);
-            return;
-          }
-
-          analyser.getByteFrequencyData(dataArray);
-          let sum = 0;
-          for (let i = 0; i < dataArray.length; i++) {
-            sum += dataArray[i];
-          }
-          const avg = sum / dataArray.length;
-          const normalizedLevel = Math.min(100, Math.round((avg / 55) * 100));
-          setMicLevel(normalizedLevel);
-
-          const now = Date.now();
-          if (now - listenStartTime > 350 && avg > 14) {
-            voiceActiveFrames += 1;
-            lastVoiceTime = now;
-
-            if (voiceActiveFrames >= 5 && !hasUserSpokenRef.current) {
-              hasUserSpokenRef.current = true;
-              resetNoQuestionTimer(6000);
-            }
-          }
-
-          if (
-            (hasUserSpokenRef.current ||
-              liveTranscriptRef.current.trim().length > 0) &&
-            now - lastVoiceTime > 1350
-          ) {
-            finishVoiceRecordingAndSubmit();
-            return;
-          }
-
-          vadAnimationRef.current = requestAnimationFrame(checkVolumeLoop);
-        };
-
-        vadAnimationRef.current = requestAnimationFrame(checkVolumeLoop);
-      } catch {
-        // Ignore AudioContext analyser errors
-      }
-    }
   }, [finishVoiceRecordingAndSubmit, stopAllAudioAndListening]);
 
-  const startAiGreetingAndAskUser = useCallback(async () => {
-    if (!micStreamRef.current || !micStreamRef.current.active) {
-      if (pendingMicPromiseRef.current) {
-        try {
-          const stream = await pendingMicPromiseRef.current;
-          micStreamRef.current = stream;
-          setMicError(null);
-        } catch {
-          // Handled during listening phase
-        }
-      } else if (navigator.mediaDevices?.getUserMedia) {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          micStreamRef.current = stream;
-          setMicError(null);
-        } catch {}
-      }
-    }
-
+  const startAiGreetingAndAskUser = useCallback(() => {
+    // 1. Immediately update UI state (zero lag)
     setPhase("ASKING_INTENT");
     setStatusMessage("Hi there.");
     setSubStatusText(
       "Speak directly to ask a question, or double-tap (2x) anywhere to take a picture."
     );
 
+    // 2. Ensure microphone is warm in background if not already active
+    if (!micStreamRef.current || !micStreamRef.current.active) {
+      if (!pendingMicPromiseRef.current && navigator.mediaDevices?.getUserMedia) {
+        pendingMicPromiseRef.current = navigator.mediaDevices
+          .getUserMedia({ audio: true })
+          .then((stream) => {
+            micStreamRef.current = stream;
+            setMicError(null);
+            return stream;
+          })
+          .catch((err) => {
+            console.warn("Background mic acquire notice:", err);
+            throw err;
+          });
+      }
+    }
+
+    // 3. Play greeting audio with seamless transition to listening
     soundFX.playStoredHelloGreeting(isMutedRef.current, () => {
       if (phaseRef.current === "ASKING_INTENT") {
         startListeningForUserIntent();
@@ -1048,7 +1054,7 @@ export function useAssistantController() {
     const now = Date.now();
     const timeSinceLastTap = now - lastTapTimeRef.current;
 
-    if (timeSinceLastTap > 0 && timeSinceLastTap < 320) {
+    if (timeSinceLastTap > 0 && timeSinceLastTap < 280) {
       if (singleTapTimerRef.current) {
         clearTimeout(singleTapTimerRef.current);
         singleTapTimerRef.current = null;
@@ -1063,11 +1069,7 @@ export function useAssistantController() {
       clearTimeout(singleTapTimerRef.current);
     }
 
-    // CRITICAL FOR IPHONE / IOS SAFARI:
-    // iOS Safari requires navigator.mediaDevices.getUserMedia() to be invoked
-    // synchronously during a direct user touch/click gesture!
-    // A setTimeout(..., 270) expires the gesture activation token, causing Safari
-    // to silently block getUserMedia with NotAllowedError without showing the prompt!
+    // In IDLE state, synchronously prime the microphone in this direct user gesture tick
     if (phaseRef.current === "IDLE") {
       soundFX.unlockAudio();
       if (
@@ -1106,7 +1108,7 @@ export function useAssistantController() {
       } else {
         haltAllProcessesAndReturnToIdle();
       }
-    }, 270);
+    }, 200);
   }, [
     haltAllProcessesAndReturnToIdle,
     processUserIntent,
