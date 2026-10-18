@@ -23,7 +23,7 @@ export const TopHeaderBar: React.FC<TopHeaderBarProps> = ({
     <header className="relative z-20 flex items-center justify-between px-4 h-16 bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-[0_2px_12px_rgba(35,48,83,0.04)]">
       <div className="flex items-center">
         <img
-          src="/logo-icansee.svg"
+          src="/logo-icansee.png"
           alt="iCanSee Logo"
           className="h-9 w-auto object-contain select-none"
         />
