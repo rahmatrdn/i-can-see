@@ -64,6 +64,21 @@ export function getOrbTheme(
     };
   }
 
+  if (phase === "PROCESSING_AI") {
+    return {
+      waveBorder: "border-[#6366F1]/55",
+      waveBg: "bg-[#818CF8]/18",
+      auraStyle:
+        "radial-gradient(circle, rgba(129,140,248,0.48) 0%, rgba(99,102,241,0.2) 55%, rgba(129,140,248,0) 72%)",
+      coreStyle:
+        "radial-gradient(circle at 35% 28%, #818CF8 0%, #6366F1 50%, #4338CA 100%)",
+      coreShadow: "shadow-[0_18px_60px_rgba(99,102,241,0.45)]",
+      textColor: "text-white",
+      badgeBg: "bg-white/25 text-white",
+      barColor: "bg-white",
+    };
+  }
+
   return {
     waveBorder: "border-[#354C6E]/45",
     waveBg: "bg-[#517DA8]/15",

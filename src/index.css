@@ -149,3 +149,59 @@
 .animate-voice-bar-7 {
   animation: ai-voice-bar 0.58s ease-in-out 0.15s infinite;
 }
+
+/* Elegant breathing glow for AI processing */
+@keyframes ai-glow-breathe {
+  0%, 100% {
+    transform: scale(0.94);
+    filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.5));
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.08);
+    filter: drop-shadow(0 0 16px rgba(255, 255, 255, 0.95)) drop-shadow(0 0 26px rgba(165, 180, 252, 0.75));
+    opacity: 1;
+  }
+}
+
+.animate-ai-glow {
+  animation: ai-glow-breathe 2.4s ease-in-out infinite;
+}
+
+/* Harmonic thinking dots wave */
+@keyframes ai-thinking-dot {
+  0%, 100% {
+    transform: translateY(0) scale(0.8);
+    opacity: 0.35;
+  }
+  50% {
+    transform: translateY(-3.5px) scale(1.2);
+    opacity: 1;
+  }
+}
+
+.animate-ai-dot-1 {
+  animation: ai-thinking-dot 1.3s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+.animate-ai-dot-2 {
+  animation: ai-thinking-dot 1.3s cubic-bezier(0.45, 0, 0.55, 1) 0.22s infinite;
+}
+
+.animate-ai-dot-3 {
+  animation: ai-thinking-dot 1.3s cubic-bezier(0.45, 0, 0.55, 1) 0.44s infinite;
+}
+
+/* Elegant subtle shimmer sweep */
+@keyframes shimmer-sweep {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(250%);
+  }
+}
+
+.animate-shimmer-sweep {
+  animation: shimmer-sweep 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}

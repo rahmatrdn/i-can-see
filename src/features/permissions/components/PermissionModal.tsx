@@ -56,24 +56,22 @@ export const PermissionModal: React.FC<PermissionModalProps> = ({
 
         <div className="mx-auto flex items-center justify-center gap-3 pt-1">
           <div
-            className={`w-12 h-12 rounded-2xl flex items-center justify-center border transition-all ${
-              isMicGranted
+            className={`w-12 h-12 rounded-2xl flex items-center justify-center border transition-all ${isMicGranted
                 ? "bg-emerald-50 border-emerald-300 text-emerald-600"
                 : isMicBlocked
-                ? "bg-rose-50 border-rose-300 text-rose-600"
-                : "bg-[#F0F7FF] border-[#72ADD9]/40 text-[#517DA8]"
-            }`}
+                  ? "bg-rose-50 border-rose-300 text-rose-600"
+                  : "bg-[#F0F7FF] border-[#72ADD9]/40 text-[#517DA8]"
+              }`}
           >
             <Mic className="w-6 h-6" />
           </div>
           <div
-            className={`w-12 h-12 rounded-2xl flex items-center justify-center border transition-all ${
-              isCamGranted
+            className={`w-12 h-12 rounded-2xl flex items-center justify-center border transition-all ${isCamGranted
                 ? "bg-emerald-50 border-emerald-300 text-emerald-600"
                 : isCamBlocked
-                ? "bg-rose-50 border-rose-300 text-rose-600"
-                : "bg-[#F0F7FF] border-[#72ADD9]/40 text-[#233053]"
-            }`}
+                  ? "bg-rose-50 border-rose-300 text-rose-600"
+                  : "bg-[#F0F7FF] border-[#72ADD9]/40 text-[#233053]"
+              }`}
           >
             <Camera className="w-6 h-6" />
           </div>
@@ -118,19 +116,18 @@ export const PermissionModal: React.FC<PermissionModalProps> = ({
               Microphone Access
             </span>
             <span
-              className={`font-mono text-[11px] font-semibold px-2 py-0.5 rounded-full ${
-                isMicGranted
+              className={`font-mono text-[11px] font-semibold px-2 py-0.5 rounded-full ${isMicGranted
                   ? "bg-emerald-100 text-emerald-700"
                   : isMicBlocked
-                  ? "bg-rose-100 text-rose-700"
-                  : "bg-amber-100 text-amber-800"
-              }`}
+                    ? "bg-rose-100 text-rose-700"
+                    : "bg-amber-100 text-amber-800"
+                }`}
             >
               {isMicGranted
                 ? "Allowed ✓"
                 : isMicBlocked
-                ? "Blocked ✕"
-                : "Not Allowed Yet"}
+                  ? "Blocked ✕"
+                  : "Not Allowed Yet"}
             </span>
           </div>
 
@@ -142,19 +139,18 @@ export const PermissionModal: React.FC<PermissionModalProps> = ({
               Camera Access
             </span>
             <span
-              className={`font-mono text-[11px] font-semibold px-2 py-0.5 rounded-full ${
-                isCamGranted
+              className={`font-mono text-[11px] font-semibold px-2 py-0.5 rounded-full ${isCamGranted
                   ? "bg-emerald-100 text-emerald-700"
                   : isCamBlocked
-                  ? "bg-rose-100 text-rose-700"
-                  : "bg-amber-100 text-amber-800"
-              }`}
+                    ? "bg-rose-100 text-rose-700"
+                    : "bg-amber-100 text-amber-800"
+                }`}
             >
               {isCamGranted
                 ? "Allowed ✓"
                 : isCamBlocked
-                ? "Blocked ✕"
-                : "Not Allowed Yet"}
+                  ? "Blocked ✕"
+                  : "Not Allowed Yet"}
             </span>
           </div>
         </div>
@@ -224,16 +220,6 @@ export const PermissionModal: React.FC<PermissionModalProps> = ({
             </span>
           </button>
 
-          {/* Dismiss button */}
-          {onClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              className="text-xs text-slate-500 hover:text-slate-700 underline font-medium pt-1 cursor-pointer block mx-auto"
-            >
-              Continue for Now
-            </button>
-          )}
         </div>
       </div>
     </div>

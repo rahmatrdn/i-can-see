@@ -178,7 +178,23 @@ export const CenterAssistantOrb: React.FC<CenterAssistantOrbProps> = ({
 
           {phase === "PROCESSING_AI" && (
             <>
-              <Sparkles className="relative z-10 w-10 h-10 stroke-[2.3] animate-spin" />
+              <div className="relative z-10 flex flex-col items-center justify-center">
+                <div className="relative flex items-center justify-center">
+                  <span
+                    aria-hidden="true"
+                    className="absolute -inset-2.5 rounded-full bg-white/20 blur-md animate-pulse"
+                  />
+                  <Sparkles className="relative z-10 w-8 h-8 stroke-[2.2] animate-ai-glow" />
+                </div>
+                <div
+                  aria-hidden="true"
+                  className="flex items-center justify-center gap-1.5 mt-1.5"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_6px_rgba(255,255,255,0.9)] animate-ai-dot-1" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_6px_rgba(255,255,255,0.9)] animate-ai-dot-2" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-white shadow-[0_0_6px_rgba(255,255,255,0.9)] animate-ai-dot-3" />
+                </div>
+              </div>
               <span
                 className={`relative z-10 flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${orbTheme.badgeBg}`}
               >
@@ -206,6 +222,15 @@ export const CenterAssistantOrb: React.FC<CenterAssistantOrbProps> = ({
               />
             );
           })}
+        </div>
+      )}
+
+      {/* Elegant Shimmering Bar when AI is Processing Answer */}
+      {phase === "PROCESSING_AI" && (
+        <div className="mt-2 flex items-center justify-center gap-1.5 h-6">
+          <div className="relative w-32 h-1.5 rounded-full bg-indigo-100/80 overflow-hidden shadow-xs">
+            <div className="absolute inset-y-0 w-16 rounded-full bg-gradient-to-r from-transparent via-[#6366F1] to-transparent animate-shimmer-sweep" />
+          </div>
         </div>
       )}
 

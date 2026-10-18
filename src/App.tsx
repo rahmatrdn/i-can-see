@@ -105,15 +105,6 @@ export default function App() {
               />
             ))}
 
-            {/* Top Status Banner */}
-            <StatusBanner
-              cameraActive={cameraActive}
-              phase={phase}
-              micError={micError}
-              onRequestMic={triggerMicrophonePermissionRequest}
-              onOpenPermissionsModal={openPermissionModal}
-            />
-
             {/* Pure Circular Center Orb */}
             <CenterAssistantOrb
               phase={phase}
@@ -123,17 +114,6 @@ export default function App() {
               micLevel={micLevel}
               onCenterClick={handleCenterCircleClick}
             />
-
-            {/* Bottom Instruction Caption */}
-            <div className="text-center pt-2">
-              <p className="text-xs font-mono font-semibold text-[#354C6E] tracking-wide">
-                {phase === "IDLE"
-                  ? "TAP 1x FOR VOICE · DOUBLE-TAP (2x) TO TAKE PICTURE"
-                  : phase === "AIMING_CAMERA"
-                  ? "TAP 1x ANYWHERE ON SCREEN WHEN READY TO CAPTURE"
-                  : "TAP 1x TO STOP AI · DOUBLE-TAP (2x) TO TAKE PICTURE"}
-              </p>
-            </div>
           </div>
 
           {/* Startup Microphone & Camera Permission Popup Modal */}
