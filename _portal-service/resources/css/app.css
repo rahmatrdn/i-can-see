@@ -1,0 +1,133 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/forms';
+
+/* Enable class-based dark mode for Preline UI compatibility */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+@import '../../node_modules/preline/variants.css';
+@source '../../node_modules/preline/dist/*.js';
+
+@theme {
+    --font-sans: 'Geist', ui-sans-serif, system-ui, sans-serif;
+    --font-display: 'Plus Jakarta Sans', 'Geist', ui-sans-serif, system-ui, sans-serif;
+    --font-accessible: 'Atkinson Hyperlegible', ui-sans-serif, system-ui, sans-serif;
+
+    /* iCanSee Brand Palette */
+    --color-brand-primary: #26335c;
+    --color-brand-secondary: #77b1dc;
+    --color-brand-primary-dark: #1a233f;
+    --color-brand-primary-light: #36487e;
+    --color-brand-secondary-dark: #569ecd;
+    --color-brand-secondary-light: #f0f7fc;
+    --color-brand-secondary-subtle: #f8fbfe;
+
+    /* Semantic Colors (Auto-adapt in dark mode via CSS variables below) */
+    --color-primary: var(--semantic-primary);
+    --color-secondary: var(--semantic-secondary);
+    --color-success: var(--semantic-success);
+    --color-danger: var(--semantic-danger);
+    --color-warning: var(--semantic-warning);
+    --color-info: var(--semantic-info);
+
+    /* Full primary scale mapped from Tailwind Blue */
+    --color-primary-50: var(--color-blue-50);
+    --color-primary-100: var(--color-blue-100);
+    --color-primary-200: var(--color-blue-200);
+    --color-primary-300: var(--color-blue-300);
+    --color-primary-400: var(--color-blue-400);
+    --color-primary-500: var(--color-blue-500);
+    --color-primary-600: var(--color-blue-600);
+    --color-primary-700: var(--color-blue-700);
+    --color-primary-800: var(--color-blue-800);
+    --color-primary-900: var(--color-blue-900);
+    --color-primary-950: var(--color-blue-950);
+}
+
+@layer base {
+    :root {
+        /* Light mode semantic colors */
+        --semantic-primary: var(--color-blue-600);
+        --semantic-secondary: var(--color-slate-600);
+        --semantic-success: var(--color-emerald-600);
+        --semantic-danger: var(--color-red-600);
+        --semantic-warning: var(--color-amber-500);
+        --semantic-info: var(--color-cyan-600);
+    }
+
+    .dark {
+        /* Dark mode semantic colors */
+        --semantic-primary: var(--color-blue-500);
+        --semantic-secondary: var(--color-slate-400);
+        --semantic-success: var(--color-emerald-500);
+        --semantic-danger: var(--color-red-500);
+        --semantic-warning: var(--color-amber-400);
+        --semantic-info: var(--color-cyan-500);
+    }
+}
+
+/* Form Input Styling for Tailwind CSS v4 */
+input:where([type="text"], [type="email"], [type="password"], [type="number"], [type="tel"], [type="url"], [type="search"], [type="date"], [type="datetime-local"], [type="month"], [type="week"], [type="time"]),
+select,
+textarea {
+    border: 1px solid oklch(.928 .006 264.531) !important;
+}
+
+/* Dark mode border colors */
+.dark input:where([type="text"], [type="email"], [type="password"], [type="number"], [type="tel"], [type="url"], [type="search"], [type="date"], [type="datetime-local"], [type="month"], [type="week"], [type="time"]),
+.dark select,
+.dark textarea {
+    border-color: oklch(.371 0 0) !important;
+}
+
+/* Landing Page Smooth Shadows & Effects */
+html {
+    scroll-behavior: smooth;
+}
+
+@utility shadow-soft {
+    box-shadow: 0 2px 4px rgba(38, 51, 92, 0.04), 0 10px 24px -4px rgba(38, 51, 92, 0.08);
+}
+
+@utility shadow-card {
+    box-shadow: 0 4px 6px -1px rgba(38, 51, 92, 0.04), 0 16px 36px -4px rgba(38, 51, 92, 0.08), 0 0 0 1px rgba(38, 51, 92, 0.04);
+}
+
+@utility shadow-card-hover {
+    box-shadow: 0 10px 20px -3px rgba(38, 51, 92, 0.07), 0 24px 48px -10px rgba(38, 51, 92, 0.14), 0 0 0 1.5px rgba(119, 177, 220, 0.45);
+}
+
+@utility shadow-inner-soft {
+    box-shadow: inset 0 2px 4px 0 rgba(38, 51, 92, 0.06);
+}
+
+@utility shadow-glow-brand {
+    box-shadow: 0 14px 35px -6px rgba(119, 177, 220, 0.45);
+}
+
+@utility shadow-glow-primary {
+    box-shadow: 0 20px 45px -10px rgba(38, 51, 92, 0.38);
+}
+
+@utility shadow-bento {
+    box-shadow: 0 1px 3px rgba(38, 51, 92, 0.04), 0 14px 30px -6px rgba(38, 51, 92, 0.07), 0 0 0 1px rgba(226, 232, 240, 0.85);
+}
+
+@utility shadow-bento-hover {
+    box-shadow: 0 10px 25px -4px rgba(38, 51, 92, 0.1), 0 25px 50px -12px rgba(38, 51, 92, 0.16), 0 0 0 1.5px rgba(119, 177, 220, 0.6);
+}
+
+@utility shadow-glass {
+    box-shadow: 0 8px 32px 0 rgba(10, 16, 35, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+@utility shadow-glass-hover {
+    box-shadow: 0 16px 48px -4px rgba(10, 16, 35, 0.65), 0 0 30px -8px rgba(119, 177, 220, 0.25), inset 0 0 0 1px rgba(119, 177, 220, 0.4);
+}
+
+@utility shadow-hud {
+    box-shadow: 0 0 35px -8px rgba(119, 177, 220, 0.35), inset 0 1px 1px 0 rgba(255, 255, 255, 0.15);
+}
