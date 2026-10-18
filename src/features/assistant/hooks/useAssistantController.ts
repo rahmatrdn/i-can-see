@@ -316,7 +316,7 @@ export function useAssistantController() {
             base64Wav = data.audioBase64;
           }
         } catch {
-          // Fallback to browser speechSynthesis
+          // Fallback below
         }
       }
 
@@ -329,6 +329,15 @@ export function useAssistantController() {
       }
 
       if (base64Wav) {
+        // 1. Primary for mobile & iOS Safari: Play through unlocked Web Audio API context
+        const played = await soundFX.playBase64Audio(
+          base64Wav,
+          isMutedRef.current,
+          onFinished
+        );
+        if (played) return;
+
+        // 2. Secondary fallback: HTMLAudioElement
         try {
           if (!audioPlayerRef.current) {
             audioPlayerRef.current = new Audio();
@@ -346,10 +355,11 @@ export function useAssistantController() {
           await player.play();
           return;
         } catch {
-          // If autoplay or audio element fails, use browser SpeechSynthesis
+          // If HTMLAudioElement fails, fallback to SpeechSynthesis
         }
       }
 
+      // 3. Last-ditch fallback: browser SpeechSynthesis
       if (typeof window !== "undefined" && "speechSynthesis" in window) {
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = "en-US";

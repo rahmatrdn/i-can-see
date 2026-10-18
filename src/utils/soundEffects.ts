@@ -188,7 +188,84 @@ class SoundAndHaptics {
     );
   }
 
+  private activeBufferSource: AudioBufferSourceNode | null = null;
+
+  /**
+   * Plays base64 audio (MP3, WAV) directly through Web Audio API.
+   * This bypasses iOS Safari's HTMLAudioElement autoplay blocking after async network calls!
+   */
+  public async playBase64Audio(
+    base64DataUrl: string,
+    isMuted: boolean,
+    onFinished?: () => void
+  ): Promise<boolean> {
+    if (isMuted) {
+      if (onFinished) onFinished();
+      return true;
+    }
+
+    this.stopSpokenAudio();
+
+    try {
+      const ctx = this.getContext();
+      if (!ctx) return false;
+      if (ctx.state === "suspended") {
+        await ctx.resume().catch(() => {});
+      }
+
+      const commaIdx = base64DataUrl.indexOf(",");
+      const rawBase64 =
+        commaIdx >= 0 ? base64DataUrl.slice(commaIdx + 1) : base64DataUrl;
+
+      // Decode base64 to binary ArrayBuffer
+      const binaryStr = atob(rawBase64);
+      const len = binaryStr.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryStr.charCodeAt(i);
+      }
+
+      // decodeAudioData requires buffer slice to prevent detachment issues
+      const audioBuffer = await new Promise<AudioBuffer>((resolve, reject) => {
+        ctx.decodeAudioData(bytes.buffer.slice(0), resolve, reject);
+      });
+
+      const source = ctx.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(ctx.destination);
+      this.activeBufferSource = source;
+
+      let finished = false;
+      const finishOnce = () => {
+        if (finished) return;
+        finished = true;
+        this.activeBufferSource = null;
+        if (onFinished) onFinished();
+      };
+
+      source.onended = finishOnce;
+      source.start(0);
+      return true;
+    } catch (err) {
+      console.warn("Web Audio API decode error, falling back:", err);
+      return false;
+    }
+  }
+
+  public stopSpokenAudio() {
+    if (this.activeBufferSource) {
+      try {
+        this.activeBufferSource.onended = null;
+        this.activeBufferSource.stop();
+      } catch {
+        // ignore
+      }
+      this.activeBufferSource = null;
+    }
+  }
+
   public stopStoredGreeting() {
+    this.stopSpokenAudio();
     if (this.activeVoiceAudio) {
       try {
         this.activeVoiceAudio.onended = null;

@@ -49,56 +49,86 @@ async function generateContentWithModelCascade(
 }
 
 async function generateSpeechBase64(text: string): Promise<string | null> {
-  // 1. Primary: Fetch natural English MP3 speech stream (reliable, zero quota exhaustion)
+  // 1. Primary: Fetch natural MP3 speech stream in sentence chunks (natural audio stream)
   try {
-    const cleanText = text.replace(/\s+/g, " ").trim().slice(0, 195);
-    const url =
-      "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q=" +
-      encodeURIComponent(cleanText);
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-      },
-    });
-    if (res.ok) {
-      const buf = Buffer.from(await res.arrayBuffer());
-      if (buf.length > 200) {
-        return `data:audio/mpeg;base64,${buf.toString("base64")}`;
+    const cleanText = text.replace(/\s+/g, " ").trim();
+    if (cleanText) {
+      const isIndonesian =
+        /\b(saya|ini|itu|ada|di|ke|dari|kamu|anda|depan|kamera|foto|gambar|lihat|bisa|meja|kursi|buku|kacamata|gelas|botol|terima|kasih|sedang|sudah)\b/i.test(cleanText);
+      const lang = isIndonesian ? "id" : "en";
+
+      const sentenceRegex = /[^.!?]+[.!?]+|\S+/g;
+      const sentences = cleanText.match(sentenceRegex) || [cleanText];
+      const chunks: string[] = [];
+      let currentChunk = "";
+
+      for (const s of sentences) {
+        if ((currentChunk + " " + s).trim().length <= 180) {
+          currentChunk = (currentChunk + " " + s).trim();
+        } else {
+          if (currentChunk) chunks.push(currentChunk);
+          currentChunk = s.trim().slice(0, 180);
+        }
+      }
+      if (currentChunk) chunks.push(currentChunk);
+
+      const buffers: Buffer[] = [];
+      for (const chunk of chunks.slice(0, 4)) {
+        const url =
+          `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${lang}&q=` +
+          encodeURIComponent(chunk);
+        const res = await fetch(url, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+          },
+        });
+        if (res.ok) {
+          const buf = Buffer.from(await res.arrayBuffer());
+          if (buf.length > 100) buffers.push(buf);
+        }
+      }
+
+      if (buffers.length > 0) {
+        const fullBuf = Buffer.concat(buffers);
+        return `data:audio/mpeg;base64,${fullBuf.toString("base64")}`;
       }
     }
   } catch (fallbackErr) {
     console.warn("Primary MP3 TTS warning:", fallbackErr);
   }
 
-  // 2. Secondary fallback: Gemini TTS
-  try {
-    const ttsResponse = await ai.models.generateContent({
-      model: "gemini-3.8-flash-lite-tts",
-      contents: [
-        {
-          role: "user",
-          parts: [
-            {
-              text: text,
+  // 2. Secondary fallback: Gemini audio output
+  const ttsModels = ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-3.8-flash-lite-tts"];
+  for (const modelName of ttsModels) {
+    try {
+      const ttsResponse = await ai.models.generateContent({
+        model: modelName,
+        contents: [
+          {
+            role: "user",
+            parts: [{ text }],
+          },
+        ],
+        config: {
+          responseModalities: ["AUDIO"],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: "Kore" },
             },
-          ],
-        },
-      ],
-      config: {
-        responseModalities: ["AUDIO"],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: "Kore" },
           },
         },
-      },
-    });
-    const base64Audio =
-      ttsResponse.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-    return base64Audio ? `data:audio/wav;base64,${base64Audio}` : null;
-  } catch {
-    return null;
+      });
+      const base64Audio =
+        ttsResponse.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+      if (base64Audio) {
+        return `data:audio/wav;base64,${base64Audio}`;
+      }
+    } catch {
+      // try next
+    }
   }
+
+  return null;
 }
 
 async function transcribeAudioWithFallback(
