@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>{{ env('APP_ENV') == 'local' ? '[LOCAL] ' : '' }}Smart Project Starter Kit</title>
+    <title>{{ env('APP_ENV') == 'local' ? '[LOCAL] ' : '' }}@hasSection('title')@yield('title') - @endif iCanSee</title>
 
     {{-- Favicon --}}
     @include('_admin._layout.favicon')

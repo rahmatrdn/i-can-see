@@ -1,6 +1,6 @@
-# Laravel Starter Kit
+# iCanSee Portal Service
 
-A modern Laravel starter kit with admin panel, built with Laravel, Bun for build tool, Tailwind CSS 4, and Preline UI components.
+A modern portal service and admin panel for iCanSee, built with Laravel, Bun for build tool, Tailwind CSS 4, and Preline UI components.
 
 ## Features
 
@@ -25,8 +25,8 @@ A modern Laravel starter kit with admin panel, built with Laravel, Bun for build
 
 1. Clone the repository
 ```bash
-git clone https://github.com/rahmatrdn/laravel-starter-kit.git
-cd laravel-starter-kit
+git clone https://github.com/rahmatrdn/i-can-see.git
+cd i-can-see/_portal-service
 ```
 
 2. Run the setup command

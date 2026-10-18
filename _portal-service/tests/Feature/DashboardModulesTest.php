@@ -4,7 +4,7 @@ use App\Constants\UserConst;
 use App\Models\User;
 use App\Usecase\Admin\SidebarMenuUsecase;
 
-test('dashboard modul aplikasi only shows starter kit modules', function () {
+test('dashboard modul aplikasi only shows iCanSee modules', function () {
     $user = User::factory()->make(['id' => 1, 'access_type' => UserConst::SUPERADMIN]);
 
     $modules = [
