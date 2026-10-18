@@ -10,7 +10,8 @@ RUN apt-get update \
     unzip \
     librabbitmq-dev \
     libpq-dev \
-    nano
+    nano \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN install-php-extensions \
     gd \
@@ -26,6 +27,10 @@ COPY --from=oven/bun:latest /usr/local/bin/bun /usr/local/bin/bun
 
 WORKDIR /var/www/html
 
+# Install frontend dependencies (wildcard ensures build will not fail if bun.lock or package-lock.json is absent)
+COPY package.json bun.lock* package-lock.json* ./
+RUN bun install
+
 # Copy the Laravel application files into the container.
 COPY . .
 
@@ -39,11 +44,7 @@ COPY ./deploy/php.ini /usr/local/etc/php/
 # Install Laravel dependencies using Composer.
 RUN composer install --optimize-autoloader --no-dev
 
-COPY package.json ./
-COPY bun.lock ./
-
 # Build frontend assets
-RUN bun install
 RUN bun run build
 
 # Laravel artisan commands
