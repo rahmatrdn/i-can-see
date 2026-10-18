@@ -52,7 +52,6 @@ export function useAssistantController() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
-  const recognitionRef = useRef<any>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
   const cameraStreamRef = useRef<MediaStream | null>(null);
@@ -249,17 +248,6 @@ export function useAssistantController() {
         window.speechSynthesis.cancel();
       }
       soundFX.stopStoredGreeting();
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.onresult = null;
-          recognitionRef.current.onend = null;
-          recognitionRef.current.onerror = null;
-          recognitionRef.current.stop();
-        } catch {
-          // ignore
-        }
-        recognitionRef.current = null;
-      }
       if (
         mediaRecorderRef.current &&
         mediaRecorderRef.current.state !== "inactive"
@@ -605,22 +593,7 @@ export function useAssistantController() {
     }
     setMicLevel(0);
 
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.onresult = null;
-        recognitionRef.current.onend = null;
-        recognitionRef.current.onerror = null;
-        recognitionRef.current.stop();
-      } catch {
-        // ignore
-      }
-      recognitionRef.current = null;
-    }
-
-    const spokenTextSoFar = liveTranscriptRef.current.trim();
-    const userDidSpeak = hasUserSpokenRef.current || spokenTextSoFar.length > 0;
-
-    if (!userDidSpeak) {
+    if (!hasUserSpokenRef.current) {
       if (
         mediaRecorderRef.current &&
         mediaRecorderRef.current.state !== "inactive"
@@ -647,28 +620,6 @@ export function useAssistantController() {
       setSubStatusText(
         "Tap 1x anywhere to greet the AI by voice, or double-tap (2x) anywhere to capture a photo."
       );
-      return;
-    }
-
-    if (spokenTextSoFar.length > 0) {
-      if (
-        mediaRecorderRef.current &&
-        mediaRecorderRef.current.state !== "inactive"
-      ) {
-        try {
-          mediaRecorderRef.current.onstop = null;
-          mediaRecorderRef.current.stop();
-        } catch {
-          // ignore
-        }
-      }
-      mediaRecorderRef.current = null;
-      if (micStreamRef.current) {
-        micStreamRef.current.getTracks().forEach((t) => t.stop());
-        micStreamRef.current = null;
-      }
-
-      processUserIntent({ userText: spokenTextSoFar });
       return;
     }
 
@@ -762,10 +713,7 @@ export function useAssistantController() {
           phaseRef.current === "LISTENING_VOICE" &&
           !isSubmittingVoiceRef.current
         ) {
-          if (
-            hasUserSpokenRef.current ||
-            liveTranscriptRef.current.trim().length > 0
-          ) {
+          if (hasUserSpokenRef.current) {
             finishVoiceRecordingAndSubmit();
           } else {
             stopAllAudioAndListening(false);
@@ -779,22 +727,6 @@ export function useAssistantController() {
           }
         }
       }, timeoutMs);
-    };
-
-    const scheduleAutoSubmitAfterPause = (delayMs = 1350) => {
-      if (silenceDebounceTimerRef.current) {
-        clearTimeout(silenceDebounceTimerRef.current);
-      }
-      silenceDebounceTimerRef.current = setTimeout(() => {
-        if (
-          phaseRef.current === "LISTENING_VOICE" &&
-          !isSubmittingVoiceRef.current &&
-          (hasUserSpokenRef.current ||
-            liveTranscriptRef.current.trim().length > 0)
-        ) {
-          finishVoiceRecordingAndSubmit();
-        }
-      }, delayMs);
     };
 
     // 1. Instantly use existing primed mic stream, or resolve pending promise
@@ -909,11 +841,7 @@ export function useAssistantController() {
             }
           }
 
-          if (
-            (hasUserSpokenRef.current ||
-              liveTranscriptRef.current.trim().length > 0) &&
-            now - lastVoiceTime > 1350
-          ) {
+          if (hasUserSpokenRef.current && now - lastVoiceTime > 1350) {
             finishVoiceRecordingAndSubmit();
             return;
           }
@@ -924,71 +852,6 @@ export function useAssistantController() {
         vadAnimationRef.current = requestAnimationFrame(checkVolumeLoop);
       } catch {
         // Ignore AudioContext analyser errors
-      }
-    }
-
-    // 5. Optionally launch SpeechRecognition in parallel without blocking recorder
-    const SpeechRecognition =
-      (window as any).SpeechRecognition ||
-      (window as any).webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      try {
-        const recognition = new SpeechRecognition();
-        recognitionRef.current = recognition;
-        recognition.lang = "en-US";
-        recognition.interimResults = true;
-        recognition.continuous = true;
-
-        recognition.onresult = (event: any) => {
-          let combined = "";
-          let hasFinalPiece = false;
-          for (let i = 0; i < event.results.length; ++i) {
-            combined += event.results[i][0].transcript;
-            if (event.results[i].isFinal) {
-              hasFinalPiece = true;
-            }
-          }
-          const cleaned = combined.trim();
-          if (cleaned) {
-            hasUserSpokenRef.current = true;
-            liveTranscriptRef.current = cleaned;
-            setLiveTranscript(cleaned);
-            resetNoQuestionTimer(7000);
-            scheduleAutoSubmitAfterPause(hasFinalPiece ? 1000 : 1500);
-          }
-        };
-
-        recognition.onerror = () => {
-          if (
-            liveTranscriptRef.current.trim().length > 0 &&
-            !isSubmittingVoiceRef.current
-          ) {
-            finishVoiceRecordingAndSubmit();
-          }
-        };
-
-        let restartCount = 0;
-        recognition.onend = () => {
-          if (
-            phaseRef.current === "LISTENING_VOICE" &&
-            !isSubmittingVoiceRef.current
-          ) {
-            if (liveTranscriptRef.current.trim().length > 0) {
-              finishVoiceRecordingAndSubmit();
-            } else if (restartCount < 2) {
-              restartCount++;
-              try {
-                recognition.start();
-              } catch {
-                // ignore
-              }
-            }
-          }
-        };
-
-        recognition.start();
-      } catch (e) {
-        console.warn("SpeechRecognition start warning:", e);
       }
     }
   }, [finishVoiceRecordingAndSubmit, isStreamAlive, stopAllAudioAndListening, updatePhase]);

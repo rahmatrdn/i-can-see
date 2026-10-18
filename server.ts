@@ -109,7 +109,7 @@ async function transcribeAudioWithFallback(
     "Listen to this audio recording and transcribe the exact words spoken by the user (in English or Indonesian). Return ONLY the exact words spoken without any extra commentary or quotation marks. If the audio is completely silent with no human voice at all, return an empty string.";
 
   const transcribeModels = [
-    "gemini-3.5-transcribe",
+    "gemini-2.5-flash",
     "gemini-3.1-flash-lite-preview",
     "gemini-3-flash-preview",
     "gemini-3.8-flash",
