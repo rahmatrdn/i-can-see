@@ -184,8 +184,8 @@ Open `http://localhost:3000`.
 ## Docker
 
 ```bash
-# User App (port 3000)
-docker build -t icansee-app _app-service
+# User App (build context is the repository root)
+docker build -f _app-service/Dockerfile -t icansee-app .
 
 # Portal (build context is the repository root)
 docker build -f _portal-service/Dockerfile -t icansee-portal .
