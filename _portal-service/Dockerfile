@@ -27,15 +27,17 @@ COPY --from=oven/bun:latest /usr/local/bin/bun /usr/local/bin/bun
 
 WORKDIR /var/www/html
 
+ARG SERVICE_DIR=_portal-service
+
 # Install frontend dependencies (wildcard ensures build will not fail if bun.lock or package-lock.json is absent)
-COPY package.json bun.lock* package-lock.json* ./
+COPY ${SERVICE_DIR}/package.json ${SERVICE_DIR}/bun.lock* ${SERVICE_DIR}/package-lock.json* ./
 RUN bun install
 
 # Copy the Laravel application files into the container.
-COPY . .
+COPY ${SERVICE_DIR}/ .
 
 # Start with base PHP config, then add extensions.
-COPY ./deploy/php.ini /usr/local/etc/php/
+COPY ${SERVICE_DIR}/deploy/php.ini /usr/local/etc/php/
 # COPY ./.docker/etc/supervisor.d/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Install PHP extensions
