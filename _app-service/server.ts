@@ -4,6 +4,7 @@ import { fileURLToPath } from "url";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
+import { handleLogin, handleGetCurrentUser, handleLogout } from "./server/auth.ts";
 
 dotenv.config();
 
@@ -176,6 +177,11 @@ async function startServer() {
   const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
   app.use(express.json({ limit: "25mb" }));
+
+  // Authentication Endpoints
+  app.post("/api/auth/login", handleLogin);
+  app.get("/api/auth/me", handleGetCurrentUser);
+  app.post("/api/auth/logout", handleLogout);
 
   // 1. Endpoint for standalone TTS
   app.post("/api/tts", async (req, res) => {

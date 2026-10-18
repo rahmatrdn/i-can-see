@@ -1,20 +1,22 @@
 import React from "react";
+import { AuthProvider, useAuth } from "./features/auth/context/AuthContext";
+import { LoginScreen } from "./features/auth/components/LoginScreen";
 import { TopHeaderBar } from "./components/layout/TopHeaderBar";
-import { StatusBanner } from "./components/layout/StatusBanner";
 import { CameraBackground } from "./features/camera/components/CameraBackground";
 import { CenterAssistantOrb } from "./features/assistant/components/CenterAssistantOrb";
 import { useAssistantController } from "./features/assistant/hooks/useAssistantController";
 import { useMediaPermissions } from "./features/permissions/hooks/useMediaPermissions";
 import { PermissionModal } from "./features/permissions/components/PermissionModal";
 
-export default function App() {
+function AssistantApp() {
+  const { user, logout } = useAuth();
+
   const {
     phase,
     statusMessage,
     subStatusText,
     liveTranscript,
     micLevel,
-    micError,
     cameraActive,
     facingMode,
     lastCapturedImage,
@@ -26,7 +28,6 @@ export default function App() {
     handleCenterCircleClick,
     handleToggleFacingMode,
     clearMicError,
-    triggerMicrophonePermissionRequest,
   } = useAssistantController();
 
   const {
@@ -36,8 +37,6 @@ export default function App() {
     isRequestingAccess,
     permissionRequestError,
     isInsecureContext,
-    handleRequestMicPermission,
-    handleRequestCameraPermission,
     handleRequestBrowserPermissions,
     openPermissionModal,
     closePermissionModal,
@@ -72,13 +71,15 @@ export default function App() {
             lastCapturedImage={lastCapturedImage}
           />
 
-          {/* Compact Mobile Top App Bar */}
+          {/* Compact Mobile Top App Bar with User Profile and Logout */}
           <TopHeaderBar
             facingMode={facingMode}
             onToggleFacingMode={handleToggleFacingMode}
             micPermission={micPermission}
             cameraPermission={cameraPermission}
             onOpenPermissionsModal={openPermissionModal}
+            user={user}
+            onLogout={logout}
           />
 
           {/* Universal Touch Canvas: 1x Tap for Voice, 2x Double-Tap for Camera Shortcut */}
@@ -130,5 +131,63 @@ export default function App() {
         </section>
       </main>
     </div>
+  );
+}
+
+function MainAppRouter() {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#F1F5F9] text-[#233053] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="absolute -inset-3 bg-[#72ADD9]/30 rounded-full blur-lg animate-pulse" />
+            <img
+              src="/logo-icansee.png"
+              alt="iCanSee Loading"
+              className="relative h-16 w-auto object-contain animate-bounce drop-shadow"
+            />
+          </div>
+          <div className="flex items-center gap-2 text-sm font-bold text-slate-600">
+            <svg
+              className="animate-spin h-4 w-4 text-[#517DA8]"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="4"
+              />
+              <path
+                className="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8v8H4z"
+              />
+            </svg>
+            <span>Verifying iCanSee session...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <LoginScreen />;
+  }
+
+  return <AssistantApp />;
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <MainAppRouter />
+    </AuthProvider>
   );
 }
