@@ -73,6 +73,7 @@ export function useAssistantController() {
   const phaseRef = useRef<InteractionPhase>("IDLE");
   const isMutedRef = useRef<boolean>(false);
   const pendingMicPromiseRef = useRef<Promise<MediaStream> | null>(null);
+  const pendingCameraPromptRef = useRef<string>("");
 
   const updatePhase = useCallback((newPhase: InteractionPhase) => {
     phaseRef.current = newPhase;
@@ -279,6 +280,7 @@ export function useAssistantController() {
     hasUserSpokenRef.current = false;
     liveTranscriptRef.current = "";
     setLiveTranscript("");
+    pendingCameraPromptRef.current = "";
     soundFX.playStopChime();
     updatePhase("IDLE");
     setStatusMessage("Interaction Stopped");
@@ -378,6 +380,44 @@ export function useAssistantController() {
     []
   );
 
+  const startCameraAimingShortcut = useCallback(
+    (customPrompt?: string) => {
+      stopAllAudioAndListening(false);
+      isSubmittingVoiceRef.current = false;
+      hasUserSpokenRef.current = false;
+      liveTranscriptRef.current = "";
+      setLiveTranscript("");
+
+      // Stop any mic stream
+      if (micStreamRef.current) {
+        micStreamRef.current.getTracks().forEach((t) => t.stop());
+        micStreamRef.current = null;
+      }
+      if (pendingMicPromiseRef.current) {
+        pendingMicPromiseRef.current
+          .then((s) => s.getTracks().forEach((t) => t.stop()))
+          .catch(() => { });
+        pendingMicPromiseRef.current = null;
+      }
+
+      if (customPrompt) {
+        pendingCameraPromptRef.current = customPrompt;
+      }
+
+      updatePhase("AIMING_CAMERA");
+      setStatusMessage("Point Your Camera");
+      setSubStatusText(
+        pendingCameraPromptRef.current
+          ? `Point camera & tap 1x when ready to snap: "${pendingCameraPromptRef.current}"`
+          : POINT_CAMERA_INSTRUCTION_TEXT
+      );
+
+      startLiveCameraStream();
+      soundFX.playStoredPointCameraPrompt(isMutedRef.current);
+    },
+    [startLiveCameraStream, stopAllAudioAndListening, updatePhase]
+  );
+
   const processUserIntent = useCallback(
     async (opts: {
       forceCamera?: boolean;
@@ -387,10 +427,16 @@ export function useAssistantController() {
     }) => {
       const cleanedUserText = (opts.userText || "").trim();
       const explicitCameraRegex =
-        /\b(take a picture|take a photo|capture|open camera|use camera|turn on camera|what is in front|what's in front|look in front|describe what|read this|read the text|what am i holding|scan around|see around|check camera|take picture|take photo|ambil gambar|ambil foto)\b/i;
+        /\b(take a picture|take a photo|capture|open camera|use camera|turn on camera|what is in front|what's in front|look in front|describe what|read this|read the text|what am i holding|scan around|see around|check camera|take picture|take photo|snap picture|ambil gambar|ambil foto|tolong foto|fotoin|fotokan|lihat depan|lihat ini|baca ini|apa yang saya pegang|buka kamera)\b/i;
 
-      let shouldCaptureCamera =
-        Boolean(opts.forceCamera) || explicitCameraRegex.test(cleanedUserText);
+      // Grounding: If user asked via voice to take a picture / see surroundings,
+      // do NOT auto-capture image directly. Instead transition to AIMING_CAMERA phase so user aims and snaps!
+      if (!opts.forceCamera && explicitCameraRegex.test(cleanedUserText)) {
+        startCameraAimingShortcut(cleanedUserText);
+        return;
+      }
+
+      let shouldCaptureCamera = Boolean(opts.forceCamera);
 
       if (!shouldCaptureCamera && !cleanedUserText && !opts.audioBase64) {
         stopAllAudioAndListening(false);
@@ -478,37 +524,15 @@ export function useAssistantController() {
           return;
         }
 
-        if (data.requiresCameraCapture) {
-          shouldCaptureCamera = true;
-          updatePhase("CAPTURING_CAMERA");
-          setStatusMessage("Turning on camera & taking picture...");
-          setSubStatusText(`Voice command: "${data.userTranscript}"`);
-          capturedImageBase64 = await activateCameraAndCaptureSnapshot();
-          if (controller.signal.aborted) return;
-
-          updatePhase("PROCESSING_AI");
-          setStatusMessage("Processing image");
-          setSubStatusText("AI is analyzing the objects in front of you...");
-          soundFX.playStoredProcessingImage(isMutedRef.current);
-
-          response = await fetch("/api/assist", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            signal: controller.signal,
-            body: JSON.stringify({
-              mode: "camera",
-              userText: data.userTranscript,
-              imageBase64: capturedImageBase64,
-              imageMimeType: "image/jpeg",
-              history: historyPayload,
-            }),
-          });
-
-          if (!response.ok) {
-            throw new Error("Failed to analyze the camera image");
-          }
-          data = await response.json();
-          if (controller.signal.aborted) return;
+        // Grounding: If AI detects user wants to take a picture or inspect surroundings,
+        // do NOT auto-capture image directly. Transition to AIMING_CAMERA phase so user can point camera and snap!
+        if (data.requiresCameraAim || data.requiresCameraCapture) {
+          const userPrompt =
+            data.userTranscript ||
+            cleanedUserText ||
+            "Take a picture and describe what is in front of me.";
+          startCameraAimingShortcut(userPrompt);
+          return;
         }
 
         const newEntry: InteractionLog = {
@@ -899,32 +923,6 @@ export function useAssistantController() {
     });
   }, [isStreamAlive, startListeningForUserIntent, updatePhase]);
 
-  const startCameraAimingShortcut = useCallback(() => {
-    stopAllAudioAndListening(false);
-    isSubmittingVoiceRef.current = false;
-    liveTranscriptRef.current = "";
-    setLiveTranscript("");
-
-    // If double tap occurs, immediately stop any mic stream primed on first tap
-    if (micStreamRef.current) {
-      micStreamRef.current.getTracks().forEach((t) => t.stop());
-      micStreamRef.current = null;
-    }
-    if (pendingMicPromiseRef.current) {
-      pendingMicPromiseRef.current
-        .then((s) => s.getTracks().forEach((t) => t.stop()))
-        .catch(() => { });
-      pendingMicPromiseRef.current = null;
-    }
-
-    updatePhase("AIMING_CAMERA");
-    setStatusMessage("Point Your Camera");
-    setSubStatusText(POINT_CAMERA_INSTRUCTION_TEXT);
-
-    startLiveCameraStream();
-    soundFX.playStoredPointCameraPrompt(isMutedRef.current);
-  }, [startLiveCameraStream, stopAllAudioAndListening, updatePhase]);
-
   const triggerScreenGestureAction = useCallback(() => {
     if (phaseRef.current === "AIMING_CAMERA") {
       if (singleTapTimerRef.current) {
@@ -932,9 +930,13 @@ export function useAssistantController() {
         singleTapTimerRef.current = null;
       }
       lastTapTimeRef.current = 0;
+      const question =
+        pendingCameraPromptRef.current ||
+        "Take a picture and describe the object in front of me.";
+      pendingCameraPromptRef.current = "";
       processUserIntent({
         forceCamera: true,
-        userText: "Take a picture and describe the object in front of me.",
+        userText: question,
       });
       return;
     }
@@ -989,9 +991,13 @@ export function useAssistantController() {
       if (phaseRef.current === "IDLE") {
         startAiGreetingAndAskUser();
       } else if (phaseRef.current === "AIMING_CAMERA") {
+        const question =
+          pendingCameraPromptRef.current ||
+          "Take a picture and describe the object in front of me.";
+        pendingCameraPromptRef.current = "";
         processUserIntent({
           forceCamera: true,
-          userText: "Take a picture and describe the object in front of me.",
+          userText: question,
         });
       } else {
         haltAllProcessesAndReturnToIdle();

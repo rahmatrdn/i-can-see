@@ -232,19 +232,20 @@ async function startServer() {
 
       // Check if user's spoken words ask to open camera / take a picture / see what's in front
       const cameraIntentRegex =
-        /\b(take a picture|take a photo|capture|open camera|use camera|turn on camera|what is in front|what's in front|look in front|describe what|read this|read the text|what am i holding|scan around|see around|check camera|take picture|take photo|ambil gambar|ambil foto)\b/i;
+        /\b(take a picture|take a photo|capture|open camera|use camera|turn on camera|what is in front|what's in front|look in front|describe what|read this|read the text|what am i holding|scan around|see around|check camera|take picture|take photo|snap picture|ambil gambar|ambil foto|tolong foto|fotoin|fotokan|lihat depan|lihat ini|baca ini|apa yang saya pegang|buka kamera)\b/i;
 
       const userWantsCameraNow =
         mode === "camera" || cameraIntentRegex.test(transcribedUserText);
 
       // If user asked to take a picture via voice, but client hasn't sent imageBase64 yet,
-      // tell the client to activate camera, take the snapshot, and re-submit with the image!
+      // tell client to transition to AIMING_CAMERA so user can point camera and snap!
       if (userWantsCameraNow && !imageBase64) {
         return res.json({
+          requiresCameraAim: true,
           requiresCameraCapture: true,
           userTranscript:
             transcribedUserText ||
-            "Please take a picture and describe what is in front of me.",
+            "Take a picture and describe what is in front of me.",
         });
       }
 
@@ -252,9 +253,11 @@ async function startServer() {
 Core rules:
 1. By default, you are a conversational voice companion. Speak in natural, warm, concise English that sounds great when read aloud (never use markdown symbols, asterisks, or bullet points).
 2. When NO camera image is attached (voice Q&A mode):
-   - Answer the user's question or conversation directly, clearly, and helpfully in English.
-3. When a camera image IS attached (because the user asked to take a picture / describe surroundings):
+   - If the user asks to see, look at, read, take a picture of, or inspect something in the physical world: set 'requiresCameraAim' to true and 'intentUsed' to 'camera'.
+   - Otherwise, answer the user's conversational question directly, clearly, and helpfully in English, setting 'requiresCameraAim' to false and 'intentUsed' to 'qa'.
+3. When a camera image IS attached (camera mode):
    - Describe the main objects in front of the camera spatially (center, left, right, approximate distance, colors, any visible text, and any obstacles or safety hazards).
+   - Answer any specific question the user asked about the captured photo.
    - Populate the main detected items in 'detectedObjects'.
 4. Conclude your answer or visual description cleanly and naturally so the user knows the explanation is complete.`;
 
@@ -311,6 +314,11 @@ Core rules:
                   type: Type.STRING,
                   description:
                     "Set to 'camera' if describing a camera image, or 'qa' if answering a voice question without camera.",
+                },
+                requiresCameraAim: {
+                  type: Type.BOOLEAN,
+                  description:
+                    "Set to true if user asked to see, look at, read, take a picture of, or inspect something in the physical world. Set to false for general conversational questions.",
                 },
                 spokenResponse: {
                   type: Type.STRING,
@@ -393,8 +401,9 @@ Core rules:
         parsed.userHeardText ||
         (hasImage ? "Take a picture" : "Voice message");
 
-      if (!hasImage && cameraIntentRegex.test(finalUserTranscript)) {
+      if (!hasImage && (parsed.requiresCameraAim || cameraIntentRegex.test(finalUserTranscript))) {
         return res.json({
+          requiresCameraAim: true,
           requiresCameraCapture: true,
           userTranscript: finalUserTranscript,
         });
