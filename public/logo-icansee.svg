@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 150" fill="none">
+  <defs>
+    <linearGradient id="icanseeStarGrad" x1="122" y1="10" x2="122" y2="66" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#354C6E" />
+      <stop offset="50%" stop-color="#517DA8" />
+      <stop offset="100%" stop-color="#72ADD9" />
+    </linearGradient>
+  </defs>
+
+  <!-- Stylized Eye C-Arc (Outer Left Curve with Subtle Eye Corner) -->
+  <path
+    d="M 84 31 C 48 29, 20 52, 8 83 C 20 114, 48 137, 84 135 C 94 134, 104 131, 113 125 L 105 110 C 98 115, 90 118, 81 118 C 54 118, 32 103, 25 83 C 32 63, 54 48, 81 48 C 82 48, 83 48, 84 48 Z"
+    fill="#233053"
+  />
+
+  <!-- Inner Pupil Ring -->
+  <circle
+    cx="76"
+    cy="83"
+    r="18"
+    stroke="#233053"
+    stroke-width="14"
+    fill="none"
+  />
+
+  <!-- Top-Right 4-Pointed Blue Gradient Sparkle Star -->
+  <path
+    d="M 122 10 C 125 27, 131 33, 148 36 C 131 39, 125 45, 122 62 C 119 45, 113 39, 96 36 C 113 33, 119 27, 122 10 Z"
+    fill="url(#icanseeStarGrad)"
+    stroke="url(#icanseeStarGrad)"
+    stroke-width="4"
+    stroke-linejoin="round"
+  />
+
+  <!-- Bottom-Right 4-Pointed Grey Sparkle Star -->
+  <path
+    d="M 131 74 C 133 84, 136 87, 146 89 C 136 91, 133 94, 131 104 C 129 94, 126 91, 116 89 C 126 87, 129 84, 131 74 Z"
+    fill="#929497"
+    stroke="#929497"
+    stroke-width="3"
+    stroke-linejoin="round"
+  />
+
+  <!-- "iCanSee" Rounded Bold Wordmark -->
+  <text
+    x="178"
+    y="109"
+    fill="#233053"
+    font-family="'Fredoka', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif"
+    font-size="86"
+    font-weight="700"
+    letter-spacing="-0.5"
+  >iCanSee</text>
+</svg>
