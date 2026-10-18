@@ -297,4 +297,71 @@ class UserUsecase extends Usecase
             return Response::buildErrorService($e->getMessage());
         }
     }
+
+    /**
+     * Get user statistics for dashboard.
+     *
+     * @return array{
+     *     total: int,
+     *     superadmin: int,
+     *     partner: int,
+     *     active: int,
+     *     inactive: int,
+     *     new_this_month: int,
+     *     recent_users: array<int, object>
+     * }
+     */
+    public function getStats(): array
+    {
+        try {
+            $baseQuery = DB::table(DatabaseConst::USER())
+                ->whereNull('deleted_at')
+                ->whereIn('access_type', array_keys(UserConst::getAppAccessTypes()));
+
+            $total = (clone $baseQuery)->count();
+            $superadmin = (clone $baseQuery)->where('access_type', UserConst::SUPERADMIN)->count();
+            $partner = (clone $baseQuery)->where('access_type', UserConst::PARTNER)->count();
+            $active = (clone $baseQuery)->where('is_active', 1)->count();
+            $inactive = (clone $baseQuery)->where(function ($q) {
+                $q->where('is_active', 0)->orWhereNull('is_active');
+            })->count();
+            $newThisMonth = (clone $baseQuery)
+                ->where('created_at', '>=', now()->startOfMonth())
+                ->count();
+
+            $recentUsers = (clone $baseQuery)
+                ->select(['id', 'name', 'email', 'access_type', 'is_active', 'created_at'])
+                ->orderBy('created_at', 'desc')
+                ->limit(5)
+                ->get()
+                ->all();
+
+            return [
+                'total' => $total,
+                'superadmin' => $superadmin,
+                'partner' => $partner,
+                'active' => $active,
+                'inactive' => $inactive,
+                'new_this_month' => $newThisMonth,
+                'recent_users' => $recentUsers,
+            ];
+        } catch (Exception $e) {
+            Log::error(
+                message: $e->getMessage(),
+                context: [
+                    'method' => __METHOD__,
+                ]
+            );
+
+            return [
+                'total' => 0,
+                'superadmin' => 0,
+                'partner' => 0,
+                'active' => 0,
+                'inactive' => 0,
+                'new_this_month' => 0,
+                'recent_users' => [],
+            ];
+        }
+    }
 }

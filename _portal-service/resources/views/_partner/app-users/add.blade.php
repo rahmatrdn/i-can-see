@@ -92,12 +92,40 @@
                         </div>
 
                         <div>
-                            <label for="email" class="block text-sm font-medium mb-1.5 text-neutral-700 dark:text-neutral-300">
-                                Email Address (Optional)
+                            <label for="username" class="block text-sm font-medium mb-1.5 text-neutral-700 dark:text-neutral-300">
+                                Username <span class="text-rose-500">*</span>
                             </label>
-                            <input type="email" id="email" name="email" value="{{ old('email') }}"
-                                class="py-2.5 px-3.5 block w-full border border-neutral-200 rounded-xl text-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-neutral-900 dark:border-neutral-700 dark:text-neutral-200 placeholder-neutral-400"
-                                placeholder="e.g. user@example.com">
+                            <input type="text" id="username" name="username" value="{{ old('username') }}" required
+                                class="py-2.5 px-3.5 block w-full border border-neutral-200 rounded-xl text-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-neutral-900 dark:border-neutral-700 dark:text-neutral-200 placeholder-neutral-400 @error('username') border-rose-500 @enderror"
+                                placeholder="e.g. johndoe">
+                            @error('username')
+                                <p class="text-xs text-rose-500 mt-1">{{ $message }}</p>
+                            @enderror
+                            <p class="text-xs text-neutral-500 dark:text-neutral-400 mt-1">Used for mobile app login</p>
+                        </div>
+
+                        <div>
+                            <label for="password" class="block text-sm font-medium mb-1.5 text-neutral-700 dark:text-neutral-300">
+                                Password <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="password" id="password" name="password" required
+                                class="py-2.5 px-3.5 block w-full border border-neutral-200 rounded-xl text-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-neutral-900 dark:border-neutral-700 dark:text-neutral-200 placeholder-neutral-400 @error('password') border-rose-500 @enderror"
+                                placeholder="Minimum 6 characters">
+                            @error('password')
+                                <p class="text-xs text-rose-500 mt-1">{{ $message }}</p>
+                            @enderror
+                        </div>
+
+                        <div>
+                            <label for="password_confirmation" class="block text-sm font-medium mb-1.5 text-neutral-700 dark:text-neutral-300">
+                                Re-enter Password <span class="text-rose-500">*</span>
+                            </label>
+                            <input type="password" id="password_confirmation" name="password_confirmation" required
+                                class="py-2.5 px-3.5 block w-full border border-neutral-200 rounded-xl text-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-neutral-900 dark:border-neutral-700 dark:text-neutral-200 placeholder-neutral-400 @error('password_confirmation') border-rose-500 @enderror"
+                                placeholder="Re-enter password">
+                            @error('password_confirmation')
+                                <p class="text-xs text-rose-500 mt-1">{{ $message }}</p>
+                            @enderror
                         </div>
                     </div>
                 </div>

@@ -8,6 +8,8 @@ class UserConst
 
     const PARTNER = 2;
 
+    const APP_USER = 3;
+
     const DEFAULT_PASSWORD = '$2y$12$2pV4WiD9nLczb381xpk20uGq4NnaVhUocp5aciksw5BhcgxkiKDh2';
 
     public static function getAccessTypes(): array
@@ -15,11 +17,15 @@ class UserConst
         return [
             self::SUPERADMIN => 'Super Admin',
             self::PARTNER => 'Partner',
+            self::APP_USER => 'App User',
         ];
     }
 
     public static function getAppAccessTypes(): array
     {
-        return self::getAccessTypes();
+        return [
+            self::SUPERADMIN => 'Super Admin',
+            self::PARTNER => 'Partner',
+        ];
     }
 }

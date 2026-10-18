@@ -16,6 +16,9 @@ beforeEach(function () {
         $table->string('password');
         $table->tinyInteger('access_type')->nullable();
         $table->tinyInteger('is_active')->default(1);
+        $table->unsignedBigInteger('created_by')->nullable();
+        $table->unsignedBigInteger('updated_by')->nullable();
+        $table->unsignedBigInteger('deleted_by')->nullable();
         $table->timestamps();
         $table->softDeletes();
     });
@@ -198,14 +201,16 @@ test('partner can view partner app users index page', function () {
         ->assertSee('Register New User');
 });
 
-test('partner can submit app user registration request with pending status', function () {
+test('partner can submit app user registration request with pending status and creates login user', function () {
     [$partnerUser, $partnerId] = createPartnerUser();
 
     $payload = [
         'name' => 'Siti Nurhaliza',
         'nickname' => 'Siti',
         'phone_number' => '08987654321',
-        'email' => 'siti@example.com',
+        'username' => 'sitinurhaliza',
+        'password' => 'secret123',
+        'password_confirmation' => 'secret123',
         'gender' => AppUserConst::GENDER_FEMALE,
         'date_of_birth' => '1998-05-12',
         'national_id_number' => '3201234567890001',
@@ -231,9 +236,45 @@ test('partner can submit app user registration request with pending status', fun
 
     expect($appUser)->not->toBeNull();
     expect((int) $appUser->registration_partner_id)->toBe($partnerId);
+    expect($appUser->email)->toBe('sitinurhaliza');
     expect((int) $appUser->approval_status)->toBe(AppUserConst::STATUS_PENDING);
+    expect((int) $appUser->is_active)->toBe(AppUserConst::INACTIVE);
     expect((int) $appUser->visual_impairment_level)->toBe(AppUserConst::LEVEL_TOTAL_BLIND);
     expect($appUser->guardian_name)->toBe('Ahmad Subagyo');
+
+    $authUser = DB::table(DatabaseConst::USER())
+        ->where('email', 'sitinurhaliza')
+        ->first();
+
+    expect($authUser)->not->toBeNull();
+    expect($authUser->name)->toBe('Siti Nurhaliza');
+    expect((int) $authUser->access_type)->toBe(UserConst::APP_USER);
+    expect((int) $authUser->is_active)->toBe(0);
+    expect(Hash::check('secret123', $authUser->password))->toBeTrue();
+});
+
+test('partner app user registration validates unique username and password confirmation', function () {
+    [$partnerUser, $partnerId] = createPartnerUser();
+
+    DB::table(DatabaseConst::USER())->insert([
+        'name' => 'Existing User',
+        'email' => 'existing_user',
+        'password' => Hash::make('password'),
+        'access_type' => UserConst::APP_USER,
+        'created_at' => now(),
+    ]);
+
+    $payload = [
+        'name' => 'New User',
+        'username' => 'existing_user',
+        'password' => 'secret123',
+        'password_confirmation' => 'mismatch',
+        'visual_impairment_level' => AppUserConst::LEVEL_TOTAL_BLIND,
+    ];
+
+    $response = $this->actingAs($partnerUser)->post(route('partner.app_users.create'), $payload);
+
+    $response->assertSessionHasErrors(['username', 'password']);
 });
 
 test('partner can update an app user registration request', function () {
@@ -360,13 +401,23 @@ test('super admin can approve app user registration', function () {
     $admin = createSuperAdminUser();
     [$partner, $partnerId] = createPartnerUser();
 
+    DB::table('users')->insert([
+        'name' => 'To Be Approved User',
+        'email' => 'tobeapproved',
+        'password' => Hash::make('password'),
+        'access_type' => UserConst::APP_USER,
+        'is_active' => 0,
+        'created_at' => now(),
+    ]);
+
     $appUserId = DB::table('app_users')->insertGetId([
         'registration_partner_id' => $partnerId,
         'name' => 'To Be Approved User',
+        'email' => 'tobeapproved',
         'visual_impairment_level' => AppUserConst::LEVEL_LOW_VISION,
         'approval_status' => AppUserConst::STATUS_PENDING,
         'rejection_reason' => 'Prior reason',
-        'is_active' => 1,
+        'is_active' => AppUserConst::INACTIVE,
         'created_at' => now(),
         'updated_at' => now(),
     ]);
@@ -380,20 +431,34 @@ test('super admin can approve app user registration', function () {
 
     $updated = DB::table('app_users')->where('id', $appUserId)->first();
     expect((int) $updated->approval_status)->toBe(AppUserConst::STATUS_APPROVED)
+        ->and((int) $updated->is_active)->toBe(AppUserConst::ACTIVE)
         ->and($updated->rejection_reason)->toBeNull()
         ->and((int) $updated->updated_by)->toBe($admin->id);
+
+    $updatedAuthUser = DB::table('users')->where('email', 'tobeapproved')->first();
+    expect((int) $updatedAuthUser->is_active)->toBe(1);
 });
 
 test('super admin can reject app user registration with reason', function () {
     $admin = createSuperAdminUser();
     [$partner, $partnerId] = createPartnerUser();
 
+    DB::table('users')->insert([
+        'name' => 'To Be Rejected User',
+        'email' => 'toberejected',
+        'password' => Hash::make('password'),
+        'access_type' => UserConst::APP_USER,
+        'is_active' => 0,
+        'created_at' => now(),
+    ]);
+
     $appUserId = DB::table('app_users')->insertGetId([
         'registration_partner_id' => $partnerId,
         'name' => 'To Be Rejected User',
+        'email' => 'toberejected',
         'visual_impairment_level' => AppUserConst::LEVEL_TOTAL_BLIND,
         'approval_status' => AppUserConst::STATUS_PENDING,
-        'is_active' => 1,
+        'is_active' => AppUserConst::INACTIVE,
         'created_at' => now(),
         'updated_at' => now(),
     ]);
@@ -409,8 +474,12 @@ test('super admin can reject app user registration with reason', function () {
 
     $updated = DB::table('app_users')->where('id', $appUserId)->first();
     expect((int) $updated->approval_status)->toBe(AppUserConst::STATUS_REJECTED)
+        ->and((int) $updated->is_active)->toBe(AppUserConst::INACTIVE)
         ->and($updated->rejection_reason)->toBe('Incomplete legal guardian contact information.')
         ->and((int) $updated->updated_by)->toBe($admin->id);
+
+    $updatedAuthUser = DB::table('users')->where('email', 'toberejected')->first();
+    expect((int) $updatedAuthUser->is_active)->toBe(0);
 });
 
 test('super admin cannot reject app user registration without reason', function () {
@@ -547,5 +616,3 @@ test('partner cannot re-submit another partner rejected app user', function () {
     expect((int) $unchanged->approval_status)->toBe(AppUserConst::STATUS_REJECTED)
         ->and($unchanged->rejection_reason)->toBe('Invalid NIK');
 });
-
-

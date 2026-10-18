@@ -12,6 +12,7 @@ use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
@@ -138,7 +139,8 @@ class AppUserUsecase extends Usecase
             'name' => 'required|string|max:255',
             'nickname' => 'nullable|string|max:100',
             'phone_number' => 'nullable|string|max:50',
-            'email' => 'nullable|email|max:255',
+            'username' => 'required|string|max:255|unique:users,email|unique:app_users,email',
+            'password' => 'required|string|min:6|confirmed',
             'gender' => 'nullable|in:1,2',
             'date_of_birth' => 'nullable|date',
             'national_id_number' => 'nullable|string|max:50',
@@ -151,6 +153,12 @@ class AppUserUsecase extends Usecase
             'guardian_phone' => 'nullable|string|max:50',
             'guardian_relation' => 'nullable|string|max:100',
             'notes' => 'nullable|string',
+        ], [
+            'username.required' => 'Username is required.',
+            'username.unique' => 'Username already exists. Please choose a different username.',
+            'password.required' => 'Password is required.',
+            'password.min' => 'Password must be at least 6 characters.',
+            'password.confirmed' => 'Password confirmation does not match.',
         ]);
 
         $validator->validate();
@@ -167,14 +175,30 @@ class AppUserUsecase extends Usecase
             $approvalStatus = (int) ($data->input('approval_status', AppUserConst::STATUS_APPROVED));
         }
 
+        $isUserActive = $approvalStatus === AppUserConst::STATUS_APPROVED ? 1 : 0;
+        $isAppActive = $approvalStatus === AppUserConst::STATUS_APPROVED ? AppUserConst::ACTIVE : AppUserConst::INACTIVE;
+
         DB::beginTransaction();
         try {
+            // 1. Create user in users table for mobile app login (inactive until verified)
+            DB::table(DatabaseConst::USER())->insert([
+                'name' => $data['name'],
+                'email' => $data['username'],
+                'password' => Hash::make($data['password']),
+                'access_type' => UserConst::APP_USER,
+                'is_active' => $isUserActive,
+                'created_by' => Auth::user()?->id,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            // 2. Create app user details in app_users table
             DB::table(DatabaseConst::APP_USER())->insert([
                 'registration_partner_id' => $targetPartnerId,
                 'name' => $data['name'],
                 'nickname' => $data['nickname'] ?: null,
                 'phone_number' => $data['phone_number'] ?: null,
-                'email' => $data['email'] ?: null,
+                'email' => $data['username'],
                 'gender' => $data['gender'] ? (int) $data['gender'] : null,
                 'date_of_birth' => $data['date_of_birth'] ?: null,
                 'national_id_number' => $data['national_id_number'] ?: null,
@@ -186,7 +210,7 @@ class AppUserUsecase extends Usecase
                 'guardian_name' => $data['guardian_name'] ?: null,
                 'guardian_phone' => $data['guardian_phone'] ?: null,
                 'guardian_relation' => $data['guardian_relation'] ?: null,
-                'is_active' => AppUserConst::ACTIVE,
+                'is_active' => $isAppActive,
                 'approval_status' => $approvalStatus,
                 'notes' => $data['notes'] ?: null,
                 'created_by' => Auth::user()?->id,
@@ -216,7 +240,7 @@ class AppUserUsecase extends Usecase
             'name' => 'required|string|max:255',
             'nickname' => 'nullable|string|max:100',
             'phone_number' => 'nullable|string|max:50',
-            'email' => 'nullable|email|max:255',
+            'email' => 'nullable|string|max:255',
             'gender' => 'nullable|in:1,2',
             'date_of_birth' => 'nullable|date',
             'national_id_number' => 'nullable|string|max:50',
@@ -306,22 +330,34 @@ class AppUserUsecase extends Usecase
     {
         $partnerId = $this->getCurrentPartnerId();
 
+        $existing = DB::table(DatabaseConst::APP_USER())
+            ->where('id', $id)
+            ->whereNull('deleted_at')
+            ->when($partnerId !== null, fn ($q) => $q->where('registration_partner_id', $partnerId))
+            ->first();
+
+        if (! $existing) {
+            return Response::buildErrorNotFound('App user record not found or access denied.');
+        }
+
         DB::beginTransaction();
         try {
-            $query = DB::table(DatabaseConst::APP_USER())
+            DB::table(DatabaseConst::APP_USER())
                 ->where('id', $id)
-                ->whereNull('deleted_at')
-                ->when($partnerId !== null, fn ($q) => $q->where('registration_partner_id', $partnerId));
+                ->update([
+                    'is_active' => AppUserConst::INACTIVE,
+                    'deleted_by' => Auth::user()?->id,
+                    'deleted_at' => now(),
+                ]);
 
-            $deleted = $query->update([
-                'deleted_by' => Auth::user()?->id,
-                'deleted_at' => now(),
-            ]);
-
-            if (! $deleted) {
-                DB::rollback();
-
-                return Response::buildErrorNotFound('App user record not found or access denied.');
+            if (! empty($existing->email)) {
+                DB::table(DatabaseConst::USER())
+                    ->where('email', $existing->email)
+                    ->update([
+                        'is_active' => 0,
+                        'deleted_by' => Auth::user()?->id,
+                        'deleted_at' => now(),
+                    ]);
             }
 
             DB::commit();
@@ -392,14 +428,28 @@ class AppUserUsecase extends Usecase
 
         DB::beginTransaction();
         try {
+            $isApproved = $status === AppUserConst::STATUS_APPROVED;
+
             $payload = [
                 'approval_status' => $status,
+                'is_active' => $isApproved ? AppUserConst::ACTIVE : AppUserConst::INACTIVE,
                 'rejection_reason' => $status === AppUserConst::STATUS_REJECTED ? trim($rejectionReason) : null,
                 'updated_by' => Auth::user()?->id,
                 'updated_at' => now(),
             ];
 
             DB::table(DatabaseConst::APP_USER())->where('id', $id)->update($payload);
+
+            // Synchronize login status in users table upon verification
+            if (! empty($existing->email)) {
+                DB::table(DatabaseConst::USER())
+                    ->where('email', $existing->email)
+                    ->update([
+                        'is_active' => $isApproved ? 1 : 0,
+                        'updated_by' => Auth::user()?->id,
+                        'updated_at' => now(),
+                    ]);
+            }
 
             DB::commit();
 
@@ -437,6 +487,7 @@ class AppUserUsecase extends Usecase
         try {
             $payload = [
                 'approval_status' => AppUserConst::STATUS_PENDING,
+                'is_active' => AppUserConst::INACTIVE,
                 'rejection_reason' => null,
                 'updated_by' => Auth::user()?->id,
                 'updated_at' => now(),
@@ -451,6 +502,17 @@ class AppUserUsecase extends Usecase
             }
 
             DB::table(DatabaseConst::APP_USER())->where('id', $id)->update($payload);
+
+            // Keep login deactivated while re-submission is pending approval
+            if (! empty($existing->email)) {
+                DB::table(DatabaseConst::USER())
+                    ->where('email', $existing->email)
+                    ->update([
+                        'is_active' => 0,
+                        'updated_by' => Auth::user()?->id,
+                        'updated_at' => now(),
+                    ]);
+            }
 
             DB::commit();
 

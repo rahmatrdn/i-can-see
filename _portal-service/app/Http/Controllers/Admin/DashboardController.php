@@ -7,6 +7,7 @@ use App\Constants\UserConst;
 use App\Http\Controllers\Controller;
 use App\Usecase\Admin\AppUserUsecase;
 use App\Usecase\Admin\SidebarMenuUsecase;
+use App\Usecase\UserUsecase;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
@@ -16,7 +17,8 @@ class DashboardController extends Controller
 {
     public function __construct(
         protected SidebarMenuUsecase $sidebarMenuUsecase,
-        protected AppUserUsecase $appUserUsecase
+        protected AppUserUsecase $appUserUsecase,
+        protected UserUsecase $userUsecase
     ) {}
 
     public function index(): View|Response
@@ -42,6 +44,8 @@ class DashboardController extends Controller
 
         $partner = null;
         $stats = null;
+        $userStats = null;
+        $appUserStats = null;
 
         if ($isPartner && $user) {
             $partner = DB::table(DatabaseConst::REGISTRATION_PARTNER())
@@ -50,6 +54,9 @@ class DashboardController extends Controller
                 ->first();
 
             $stats = $this->appUserUsecase->getStats();
+        } else {
+            $userStats = $this->userUsecase->getStats();
+            $appUserStats = $this->appUserUsecase->getStats();
         }
 
         return view('_admin.dashboard', [
@@ -57,6 +64,8 @@ class DashboardController extends Controller
             'isPartner' => $isPartner,
             'partner' => $partner,
             'stats' => $stats,
+            'userStats' => $userStats,
+            'appUserStats' => $appUserStats,
         ]);
     }
 }
