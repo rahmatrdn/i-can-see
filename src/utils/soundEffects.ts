@@ -137,7 +137,7 @@ class SoundAndHaptics {
   public playStoredHelloGreeting(isMuted: boolean, onFinished: () => void) {
     this.vibrate([40, 30, 60]);
     if (isMuted) {
-      setTimeout(onFinished, 50);
+      setTimeout(onFinished, 150);
       return;
     }
 
@@ -146,19 +146,19 @@ class SoundAndHaptics {
       if (finished) return;
       finished = true;
       this.stopStoredGreeting();
-      onFinished();
+      // Natural, comfortable 200ms pause after greeting finishes before listening chime
+      setTimeout(onFinished, 200);
     };
 
-    // The speech vocalization "Hi there." finishes at ~720ms.
-    // Triggering listening at 720ms eliminates the tail silence lag on mobile browsers!
-    const earlyTimer = setTimeout(triggerFinishedOnce, 720);
+    // Safety fallback timer only if onended does not fire
+    const safetyTimer = setTimeout(triggerFinishedOnce, 1400);
 
     this.playStaticAudioFile(
       this.helloAudio,
       "/audio/hello.mp3?v=3",
       isMuted,
       () => {
-        clearTimeout(earlyTimer);
+        clearTimeout(safetyTimer);
         triggerFinishedOnce();
       }
     );
