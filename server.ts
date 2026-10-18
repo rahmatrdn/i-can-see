@@ -424,6 +424,9 @@ Core rules:
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`iCanSee Server running on http://localhost:${PORT}`);
+    console.log(`ℹ️ Catatan untuk pengujian di iPhone / Safari:`);
+    console.log(`   iOS Safari mewajibkan HTTPS atau localhost (Secure Context) untuk izin mikrofon & kamera.`);
+    console.log(`   Jika mengakses via LAN Wi-Fi dari iPhone, gunakan tunnel HTTPS (misal: 'npx localtunnel --port ${PORT}' atau 'ngrok http ${PORT}').`);
   });
 }
 

@@ -1,17 +1,21 @@
 import React from "react";
-import { Camera, CameraOff } from "lucide-react";
+import { Camera, CameraOff, MicOff } from "lucide-react";
 import { InteractionPhase } from "../../types/assistant";
 
 interface StatusBannerProps {
   cameraActive: boolean;
   phase: InteractionPhase;
   micError: string | null;
+  onRequestMic?: () => void;
+  onOpenPermissionsModal?: () => void;
 }
 
 export const StatusBanner: React.FC<StatusBannerProps> = ({
   cameraActive,
   phase,
   micError,
+  onRequestMic,
+  onOpenPermissionsModal,
 }) => {
   return (
     <div className="space-y-2">
@@ -42,8 +46,34 @@ export const StatusBanner: React.FC<StatusBannerProps> = ({
       </div>
 
       {micError && (
-        <div className="bg-rose-50 border border-rose-300 text-rose-700 px-3.5 py-2.5 rounded-xl text-xs font-medium">
-          {micError}
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (onRequestMic) {
+              onRequestMic();
+            } else if (onOpenPermissionsModal) {
+              onOpenPermissionsModal();
+            }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              e.stopPropagation();
+              if (onRequestMic) onRequestMic();
+              else if (onOpenPermissionsModal) onOpenPermissionsModal();
+            }
+          }}
+          className="bg-rose-50 border border-rose-300 text-rose-800 px-3.5 py-2.5 rounded-xl text-xs font-medium flex items-center justify-between gap-2 cursor-pointer hover:bg-rose-100/90 active:scale-[0.99] transition-all shadow-xs"
+        >
+          <div className="flex items-center gap-2 flex-1">
+            <MicOff className="w-4 h-4 text-rose-600 shrink-0" />
+            <span className="leading-snug">{micError}</span>
+          </div>
+          <span className="shrink-0 text-[11px] font-bold text-rose-700 bg-white px-2 py-1 rounded-lg border border-rose-200">
+            Izinkan Mic ❯
+          </span>
         </div>
       )}
     </div>

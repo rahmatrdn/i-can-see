@@ -26,6 +26,7 @@ export default function App() {
     handleCenterCircleClick,
     handleToggleFacingMode,
     clearMicError,
+    triggerMicrophonePermissionRequest,
   } = useAssistantController();
 
   const {
@@ -34,7 +35,12 @@ export default function App() {
     showPermissionModal,
     isRequestingAccess,
     permissionRequestError,
+    isInsecureContext,
+    handleRequestMicPermission,
+    handleRequestCameraPermission,
     handleRequestBrowserPermissions,
+    openPermissionModal,
+    closePermissionModal,
   } = useMediaPermissions({
     facingMode,
     onMicGranted: clearMicError,
@@ -70,6 +76,9 @@ export default function App() {
           <TopHeaderBar
             facingMode={facingMode}
             onToggleFacingMode={handleToggleFacingMode}
+            micPermission={micPermission}
+            cameraPermission={cameraPermission}
+            onOpenPermissionsModal={openPermissionModal}
           />
 
           {/* Universal Touch Canvas: 1x Tap for Voice, 2x Double-Tap for Camera Shortcut */}
@@ -101,6 +110,8 @@ export default function App() {
               cameraActive={cameraActive}
               phase={phase}
               micError={micError}
+              onRequestMic={triggerMicrophonePermissionRequest}
+              onOpenPermissionsModal={openPermissionModal}
             />
 
             {/* Pure Circular Center Orb */}
@@ -132,7 +143,11 @@ export default function App() {
             cameraPermission={cameraPermission}
             isRequestingAccess={isRequestingAccess}
             permissionRequestError={permissionRequestError}
+            isInsecureContext={isInsecureContext}
             onRequestPermissions={handleRequestBrowserPermissions}
+            onRequestMicOnly={handleRequestMicPermission}
+            onRequestCameraOnly={handleRequestCameraPermission}
+            onClose={closePermissionModal}
           />
         </section>
       </main>

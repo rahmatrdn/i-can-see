@@ -3,89 +3,8 @@
 export const POINT_CAMERA_INSTRUCTION_TEXT =
   "Point your camera at the object you want to capture. Then, tap the screen once when you're ready.";
 
-/**
- * Generates a realistic two-part mechanical SLR/Smartphone Camera Shutter WAV in memory.
- */
-function createCameraShutterWavUrl(): string {
-  if (typeof window === "undefined") return "";
-  const sampleRate = 44100;
-  const durationSeconds = 0.26;
-  const numSamples = Math.floor(sampleRate * durationSeconds);
-  const buffer = new ArrayBuffer(44 + numSamples * 2);
-  const view = new DataView(buffer);
-
-  const writeStr = (offset: number, str: string) => {
-    for (let i = 0; i < str.length; i++) {
-      view.setUint8(offset + i, str.charCodeAt(i));
-    }
-  };
-
-  writeStr(0, "RIFF");
-  view.setUint32(4, 36 + numSamples * 2, true);
-  writeStr(8, "WAVE");
-  writeStr(12, "fmt ");
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, 1, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * 2, true);
-  view.setUint16(32, 2, true);
-  view.setUint16(34, 16, true);
-  writeStr(36, "data");
-  view.setUint32(40, numSamples * 2, true);
-
-  let prevNoise = 0;
-
-  for (let i = 0; i < numSamples; i++) {
-    const t = i / sampleRate;
-    const white = Math.random() * 2 - 1;
-    const crispNoise = white - 0.65 * prevNoise;
-    prevNoise = white;
-
-    let signal = 0;
-
-    // 1st click: first curtain snap
-    if (t >= 0.005 && t < 0.06) {
-      const dt1 = t - 0.005;
-      const env1 = Math.exp(-dt1 * 130);
-      const click1 =
-        0.65 * crispNoise +
-        0.35 * Math.sin(2 * Math.PI * 1950 * dt1) +
-        0.25 * Math.sin(2 * Math.PI * 820 * dt1);
-      signal += click1 * env1 * 0.95;
-    }
-
-    // Mechanical slide friction
-    if (t >= 0.03 && t < 0.068) {
-      const dtSlide = t - 0.03;
-      const slideEnv = Math.sin((dtSlide / 0.038) * Math.PI) * 0.22;
-      signal += crispNoise * slideEnv;
-    }
-
-    // 2nd click: shutter close + crisp metallic ring
-    if (t >= 0.068) {
-      const dt2 = t - 0.068;
-      const snapEnv2 = Math.exp(-dt2 * 95);
-      const ringEnv2 = Math.exp(-dt2 * 38);
-      const click2 =
-        0.7 * crispNoise * snapEnv2 +
-        0.4 * Math.sin(2 * Math.PI * 2650 * dt2) * snapEnv2 +
-        0.28 * Math.sin(2 * Math.PI * 1380 * dt2) * ringEnv2 +
-        0.15 * Math.sin(2 * Math.PI * 3900 * dt2) * ringEnv2;
-      signal += click2 * 1.0;
-    }
-
-    const clamped = Math.max(-1, Math.min(1, signal));
-    view.setInt16(44 + i * 2, clamped * 32767, true);
-  }
-
-  const blob = new Blob([buffer], { type: "audio/wav" });
-  return URL.createObjectURL(blob);
-}
-
 class SoundAndHaptics {
   private ctx: AudioContext | null = null;
-  private storedShutterWavUrl: string | null = null;
   private shutterAudioElement: HTMLAudioElement | null = null;
 
   // Preloaded static audio file players (/public/audio/*.mp3)
@@ -97,7 +16,9 @@ class SoundAndHaptics {
 
   constructor() {
     if (typeof window !== "undefined") {
-      this.storedShutterWavUrl = createCameraShutterWavUrl();
+      // Preload camera shutter MP3 from /public/audio/shutter.mp3
+      this.shutterAudioElement = new Audio("/audio/shutter.mp3");
+      this.shutterAudioElement.preload = "auto";
 
       // Preload static MP3 audio files from /public/audio/
       this.pointCameraAudio = new Audio("/audio/point-camera.mp3?v=3");
@@ -128,6 +49,13 @@ class SoundAndHaptics {
       this.ctx.resume().catch(() => {});
     }
     return this.ctx;
+  }
+
+  /**
+   * Unlocks Web Audio API AudioContext during a direct user gesture (essential for iOS Safari).
+   */
+  public unlockAudio() {
+    return this.getContext();
   }
 
   public vibrate(pattern: number | number[]) {
@@ -283,14 +211,14 @@ class SoundAndHaptics {
   public playCameraShutter() {
     this.vibrate([35, 45, 55]);
 
-    if (this.storedShutterWavUrl) {
+    if (this.shutterAudioElement) {
       try {
-        if (!this.shutterAudioElement) {
-          this.shutterAudioElement = new Audio(this.storedShutterWavUrl);
-        }
         this.shutterAudioElement.currentTime = 0;
         this.shutterAudioElement.volume = 1.0;
-        this.shutterAudioElement.play().catch(() => {});
+        const playPromise = this.shutterAudioElement.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(() => {});
+        }
         return;
       } catch {
         // Fallback to Web Audio synthesis below

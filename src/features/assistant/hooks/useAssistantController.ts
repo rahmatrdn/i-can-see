@@ -73,6 +73,7 @@ export function useAssistantController() {
 
   const phaseRef = useRef<InteractionPhase>("IDLE");
   const isMutedRef = useRef<boolean>(false);
+  const pendingMicPromiseRef = useRef<Promise<MediaStream> | null>(null);
 
   useEffect(() => {
     phaseRef.current = phase;
@@ -848,22 +849,27 @@ export function useAssistantController() {
     }
 
     let stream = micStreamRef.current;
-    try {
-      if (!stream || !stream.active) {
-        stream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-          },
-        });
-        micStreamRef.current = stream;
+    if (!stream || !stream.active) {
+      if (pendingMicPromiseRef.current) {
+        try {
+          stream = await pendingMicPromiseRef.current;
+          micStreamRef.current = stream;
+        } catch {
+          stream = null;
+        }
       }
-    } catch (err: any) {
-      console.warn("Microphone getUserMedia warning:", err);
-      if (!SpeechRecognition) {
+    }
+
+    if (!stream || !stream.active) {
+      try {
+        if (navigator.mediaDevices?.getUserMedia) {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          micStreamRef.current = stream;
+        }
+      } catch (err: any) {
+        console.warn("Microphone getUserMedia warning:", err);
         setMicError(
-          "Microphone permission is not enabled. Please allow microphone access in your browser."
+          "Izin mikrofon belum aktif. Di iPhone: Buka Pengaturan iPhone > Safari > Mikrofon > Izinkan."
         );
         setStatusMessage("Microphone Permission Needed");
         return;
@@ -966,21 +972,23 @@ export function useAssistantController() {
     }
   }, [finishVoiceRecordingAndSubmit, stopAllAudioAndListening]);
 
-  const startAiGreetingAndAskUser = useCallback(() => {
+  const startAiGreetingAndAskUser = useCallback(async () => {
     if (!micStreamRef.current || !micStreamRef.current.active) {
-      navigator.mediaDevices
-        .getUserMedia({
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-          },
-        })
-        .then((stream) => {
+      if (pendingMicPromiseRef.current) {
+        try {
+          const stream = await pendingMicPromiseRef.current;
           micStreamRef.current = stream;
           setMicError(null);
-        })
-        .catch(() => {});
+        } catch {
+          // Handled during listening phase
+        }
+      } else if (navigator.mediaDevices?.getUserMedia) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          micStreamRef.current = stream;
+          setMicError(null);
+        } catch {}
+      }
     }
 
     setPhase("ASKING_INTENT");
@@ -1001,6 +1009,18 @@ export function useAssistantController() {
     isSubmittingVoiceRef.current = false;
     liveTranscriptRef.current = "";
     setLiveTranscript("");
+
+    // If double tap occurs, immediately stop any mic stream primed on first tap
+    if (micStreamRef.current) {
+      micStreamRef.current.getTracks().forEach((t) => t.stop());
+      micStreamRef.current = null;
+    }
+    if (pendingMicPromiseRef.current) {
+      pendingMicPromiseRef.current
+        .then((s) => s.getTracks().forEach((t) => t.stop()))
+        .catch(() => {});
+      pendingMicPromiseRef.current = null;
+    }
 
     setPhase("AIMING_CAMERA");
     phaseRef.current = "AIMING_CAMERA";
@@ -1041,6 +1061,35 @@ export function useAssistantController() {
     lastTapTimeRef.current = now;
     if (singleTapTimerRef.current) {
       clearTimeout(singleTapTimerRef.current);
+    }
+
+    // CRITICAL FOR IPHONE / IOS SAFARI:
+    // iOS Safari requires navigator.mediaDevices.getUserMedia() to be invoked
+    // synchronously during a direct user touch/click gesture!
+    // A setTimeout(..., 270) expires the gesture activation token, causing Safari
+    // to silently block getUserMedia with NotAllowedError without showing the prompt!
+    if (phaseRef.current === "IDLE") {
+      soundFX.unlockAudio();
+      if (
+        typeof navigator !== "undefined" &&
+        navigator.mediaDevices?.getUserMedia &&
+        (!micStreamRef.current || !micStreamRef.current.active)
+      ) {
+        try {
+          const micPromise = navigator.mediaDevices.getUserMedia({ audio: true });
+          pendingMicPromiseRef.current = micPromise;
+          micPromise
+            .then((stream) => {
+              micStreamRef.current = stream;
+              setMicError(null);
+            })
+            .catch((err) => {
+              console.warn("Direct user gesture mic acquire notice:", err);
+            });
+        } catch (err) {
+          console.warn("Sync getUserMedia error on tap:", err);
+        }
+      }
     }
 
     singleTapTimerRef.current = setTimeout(() => {
@@ -1095,6 +1144,23 @@ export function useAssistantController() {
     setMicError(null);
   }, []);
 
+  const triggerMicrophonePermissionRequest = useCallback(async () => {
+    soundFX.unlockAudio();
+    if (!navigator.mediaDevices?.getUserMedia) return false;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      micStreamRef.current = stream;
+      setMicError(null);
+      return true;
+    } catch (err: any) {
+      console.warn("triggerMicrophonePermissionRequest err:", err);
+      setMicError(
+        "Izin mikrofon belum aktif. Di iPhone: Buka Pengaturan iPhone > Safari > Mikrofon > Izinkan."
+      );
+      return false;
+    }
+  }, []);
+
   return {
     phase,
     statusMessage,
@@ -1113,5 +1179,6 @@ export function useAssistantController() {
     handleCenterCircleClick,
     handleToggleFacingMode,
     clearMicError,
+    triggerMicrophonePermissionRequest,
   };
 }
