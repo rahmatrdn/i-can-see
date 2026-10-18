@@ -100,16 +100,16 @@ class SoundAndHaptics {
       this.storedShutterWavUrl = createCameraShutterWavUrl();
 
       // Preload static MP3 audio files from /public/audio/
-      this.pointCameraAudio = new Audio("/audio/point-camera.mp3");
+      this.pointCameraAudio = new Audio("/audio/point-camera.mp3?v=3");
       this.pointCameraAudio.preload = "auto";
 
-      this.helloAudio = new Audio("/audio/hello.mp3");
+      this.helloAudio = new Audio("/audio/hello.mp3?v=3");
       this.helloAudio.preload = "auto";
 
-      this.processingAnswerAudio = new Audio("/audio/processing-answer.mp3");
+      this.processingAnswerAudio = new Audio("/audio/processing-answer.mp3?v=3");
       this.processingAnswerAudio.preload = "auto";
 
-      this.processingImageAudio = new Audio("/audio/processing-image.mp3");
+      this.processingImageAudio = new Audio("/audio/processing-image.mp3?v=3");
       this.processingImageAudio.preload = "auto";
     }
   }
@@ -195,32 +195,32 @@ class SoundAndHaptics {
     this.vibrate([35, 35, 65]);
     this.playStaticAudioFile(
       this.pointCameraAudio,
-      "/audio/point-camera.mp3",
+      "/audio/point-camera.mp3?v=3",
       isMuted,
       onFinished
     );
   }
 
   /**
-   * Plays stored/local "/audio/hello.mp3" ("Hello!!") audio file immediately.
+   * Plays stored/local "/audio/hello.mp3" ("Hi there.") audio file immediately.
    */
   public playStoredHelloGreeting(isMuted: boolean, onFinished: () => void) {
     this.vibrate([40, 30, 60]);
     this.playStaticAudioFile(
       this.helloAudio,
-      "/audio/hello.mp3",
+      "/audio/hello.mp3?v=3",
       isMuted,
       onFinished
     );
   }
 
   /**
-   * Plays stored/local "/audio/processing-answer.mp3" ("Processing answer") audio file immediately.
+   * Plays stored/local "/audio/processing-answer.mp3" ("Processing answer.") audio file immediately.
    */
   public playStoredProcessingAnswer(isMuted: boolean, onFinished?: () => void) {
     this.playStaticAudioFile(
       this.processingAnswerAudio,
-      "/audio/processing-answer.mp3",
+      "/audio/processing-answer.mp3?v=3",
       isMuted,
       onFinished
     );

@@ -1008,12 +1008,12 @@ export default function App() {
     }
 
     setPhase("ASKING_INTENT");
-    setStatusMessage("Hello!!");
+    setStatusMessage("Hi there.");
     setSubStatusText(
       'Speak directly to ask a question, or double-tap (2x) anywhere to take a picture.'
     );
 
-    // Play stored local "Hello!!" voice immediately (no AI API request)
+    // Play stored local "/audio/hello.mp3" ("Hi there.") voice immediately (no AI API request)
     soundFX.playStoredHelloGreeting(isMutedRef.current, () => {
       if (phaseRef.current === "ASKING_INTENT") {
         startListeningForUserIntent();
@@ -1572,7 +1572,7 @@ export default function App() {
                 </span>
               </div>
               <p className="mt-2 text-sm text-slate-300 leading-relaxed">
-                Designed for blind and low-vision users. <strong>Single-tap (1x)</strong> anywhere to wake the assistant with a local <strong>&ldquo;Hello!!&rdquo;</strong> for voice Q&amp;A. <strong>Double-tap (2x)</strong> anywhere as a shortcut to take a picture: the assistant announces <em>&ldquo;Point your camera at the object you want to capture. Then, tap the screen once when you&apos;re ready.&rdquo;</em> Once you tap once, it snaps the photo and AI processes the image.
+                Designed for blind and low-vision users. <strong>Single-tap (1x)</strong> anywhere to wake the assistant with a local <strong>&ldquo;Hi there.&rdquo;</strong> for voice Q&amp;A. <strong>Double-tap (2x)</strong> anywhere as a shortcut to take a picture: the assistant announces <em>&ldquo;Point your camera at the object you want to capture. Then, tap the screen once when you&apos;re ready.&rdquo;</em> Once you tap once, it snaps the photo and AI processes the image.
               </p>
             </div>
 
@@ -1580,9 +1580,9 @@ export default function App() {
             <div className="grid grid-cols-3 gap-4">
               <div className="p-4 rounded-2xl bg-[#090D16]/70 border border-white/10">
                 <div className="text-xs font-mono text-[#38BDF8]">01. Single-Tap (1x)</div>
-                <div className="mt-1 font-bold text-sm text-white">Voice Q&amp;A (&ldquo;Hello!!&rdquo;)</div>
+                <div className="mt-1 font-bold text-sm text-white">Voice Q&amp;A (&ldquo;Hi there.&rdquo;)</div>
                 <p className="mt-1 text-xs text-slate-400 leading-relaxed">
-                  Tap once anywhere on the screen to hear &ldquo;Hello!!&rdquo; and ask the AI any question by voice.
+                  Tap once anywhere on the screen to hear &ldquo;Hi there.&rdquo; and ask the AI any question by voice.
                 </p>
               </div>
               <div className="p-4 rounded-2xl bg-[#090D16]/70 border border-[#FACC15]/30">
