@@ -145,8 +145,6 @@ export default function App() {
             permissionRequestError={permissionRequestError}
             isInsecureContext={isInsecureContext}
             onRequestPermissions={handleRequestBrowserPermissions}
-            onRequestMicOnly={handleRequestMicPermission}
-            onRequestCameraOnly={handleRequestCameraPermission}
             onClose={closePermissionModal}
           />
         </section>

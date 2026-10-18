@@ -37,7 +37,7 @@ export const TopHeaderBar: React.FC<TopHeaderBarProps> = ({
               e.stopPropagation();
               onOpenPermissionsModal();
             }}
-            aria-label="Pengaturan Izin Mikrofon & Kamera"
+            aria-label="Microphone and camera permissions"
             className={`min-h-[42px] px-2.5 rounded-xl border flex items-center gap-1.5 text-xs font-bold transition-all whitespace-nowrap shrink-0 cursor-pointer ${
               isMicGranted
                 ? "bg-[#F1F5F9] text-emerald-700 border-emerald-200 hover:bg-emerald-50"
@@ -50,7 +50,7 @@ export const TopHeaderBar: React.FC<TopHeaderBarProps> = ({
               <MicOff className="w-4 h-4 text-amber-600" />
             )}
             <span className="hidden sm:inline">
-              {isMicGranted ? "Mic OK" : "Cek Izin"}
+              {isMicGranted ? "Mic OK" : "Permissions"}
             </span>
           </button>
         )}

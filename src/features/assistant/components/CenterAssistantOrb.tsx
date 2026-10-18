@@ -216,20 +216,9 @@ export const CenterAssistantOrb: React.FC<CenterAssistantOrbProps> = ({
         {statusMessage}
       </h1>
 
-      {liveTranscript ? (
-        <div className="mt-3 px-5 py-3 rounded-2xl bg-white border-2 border-[#517DA8] shadow-sm max-w-sm w-full">
-          <p className="text-[11px] font-mono text-[#517DA8] uppercase tracking-wider">
-            Voice Captured (Sending to AI...)
-          </p>
-          <p className="mt-0.5 text-base font-bold text-[#233053] leading-snug truncate">
-            &ldquo;{liveTranscript}&rdquo;
-          </p>
-        </div>
-      ) : (
-        <p className="mt-2.5 text-base font-medium text-slate-600 leading-relaxed max-w-sm line-clamp-4">
-          {subStatusText}
-        </p>
-      )}
+      <p className="mt-2.5 text-base font-medium text-slate-600 leading-relaxed max-w-sm line-clamp-4">
+        {subStatusText}
+      </p>
     </div>
   );
 };

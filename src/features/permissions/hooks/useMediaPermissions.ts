@@ -110,7 +110,7 @@ export function useMediaPermissions({
       // Inform users immediately if opened on iPhone via plain HTTP
       if (isInsecureContext && !navigator.mediaDevices?.getUserMedia) {
         setPermissionRequestError(
-          "⚠️ iOS Safari / iPhone mewajibkan koneksi HTTPS atau localhost. Pada HTTP biasa (http://...), Safari otomatis menonaktifkan mikrofon dan kamera. Buka via HTTPS atau tunnel (seperti ngrok) agar izin muncul."
+          "⚠️ iOS Safari requires an HTTPS or localhost connection. On plain HTTP (http://...), Safari automatically disables microphone and camera access. Please open via HTTPS or a secure tunnel (e.g. ngrok) to enable permissions."
         );
       }
     };
@@ -132,11 +132,11 @@ export function useMediaPermissions({
     if (!navigator.mediaDevices?.getUserMedia) {
       if (isInsecureContext) {
         setPermissionRequestError(
-          "⚠️ iOS Safari memblokir mikrofon pada HTTP biasa. Buka aplikasi menggunakan HTTPS atau tunnel ngrok agar iPhone menampilkan popup izin mikrofon."
+          "⚠️ iOS Safari blocks microphone access on plain HTTP connections. Please open the app over HTTPS or a secure tunnel."
         );
       } else {
         setPermissionRequestError(
-          "Perangkat atau browser ini tidak mendukung getUserMedia microphone."
+          "Your browser or device does not support microphone access on this connection."
         );
       }
       return false;
@@ -148,7 +148,6 @@ export function useMediaPermissions({
     soundFX.vibrate(25);
 
     try {
-      // Use simple boolean { audio: true } which is 100% compatible with iOS Safari WebKit
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       stream.getTracks().forEach((track) => track.stop());
 
@@ -167,15 +166,15 @@ export function useMediaPermissions({
 
       if (err?.name === "NotAllowedError" || err?.name === "PermissionDeniedError") {
         setPermissionRequestError(
-          "Akses mikrofon ditolak atau diblokir di Safari. Di iPhone: Buka Pengaturan iPhone > Safari > Mikrofon > ubah ke 'Izinkan' (atau tap ikon 'aA' di kiri address bar Safari > Pengaturan Situs Web > Mikrofon: Izinkan)."
+          "Microphone access was denied or blocked in Safari. On iPhone: Go to iPhone Settings > Safari > Microphone > set to 'Allow' (or tap the 'aA' icon in the Safari address bar > Website Settings > Microphone: Allow)."
         );
       } else if (err?.name === "NotFoundError" || err?.name === "DevicesNotFoundError") {
         setPermissionRequestError(
-          "Tidak ada perangkat mikrofon yang terdeteksi di perangkat Anda."
+          "No microphone hardware was detected on your device."
         );
       } else {
         setPermissionRequestError(
-          `Gagal meminta izin mikrofon: ${err?.message || err?.name || "Unknown error"}`
+          `Failed to request microphone access: ${err?.message || err?.name || "Unknown error"}`
         );
       }
       return false;
@@ -189,11 +188,11 @@ export function useMediaPermissions({
     if (!navigator.mediaDevices?.getUserMedia) {
       if (isInsecureContext) {
         setPermissionRequestError(
-          "⚠️ iOS Safari memblokir kamera pada HTTP biasa. Buka aplikasi menggunakan HTTPS atau tunnel ngrok."
+          "⚠️ iOS Safari blocks camera access on plain HTTP connections. Please open the app over HTTPS or a secure tunnel."
         );
       } else {
         setPermissionRequestError(
-          "Perangkat atau browser ini tidak mendukung getUserMedia camera."
+          "Your browser or device does not support camera access on this connection."
         );
       }
       return false;
@@ -224,11 +223,11 @@ export function useMediaPermissions({
 
       if (err?.name === "NotAllowedError" || err?.name === "PermissionDeniedError") {
         setPermissionRequestError(
-          "Akses kamera ditolak di Safari. Di iPhone: Buka Pengaturan iPhone > Safari > Kamera > ubah ke 'Izinkan'."
+          "Camera access was denied in Safari. On iPhone: Go to iPhone Settings > Safari > Camera > set to 'Allow'."
         );
       } else {
         setPermissionRequestError(
-          `Gagal meminta izin kamera: ${err?.message || err?.name || "Unknown error"}`
+          `Failed to request camera access: ${err?.message || err?.name || "Unknown error"}`
         );
       }
       return false;
@@ -236,17 +235,17 @@ export function useMediaPermissions({
   }, [facingMode, isInsecureContext, micPermission]);
 
   /**
-   * Requests both microphone and camera permissions.
+   * Requests both microphone and camera permissions together.
    */
   const handleRequestBrowserPermissions = useCallback(async () => {
     if (!navigator.mediaDevices?.getUserMedia) {
       if (isInsecureContext) {
         setPermissionRequestError(
-          "⚠️ iOS Safari memblokir mikrofon & kamera pada HTTP biasa. Gunakan HTTPS atau tunnel ngrok agar iPhone dapat memunculkan popup izin."
+          "⚠️ iOS Safari blocks microphone and camera access on plain HTTP connections. Use HTTPS or a secure tunnel (e.g. ngrok) so iPhone can display the permission popup."
         );
       } else {
         setPermissionRequestError(
-          "Browser Anda tidak mendukung akses media pada koneksi ini."
+          "Your browser does not support media access on this connection."
         );
       }
       return;
@@ -260,7 +259,7 @@ export function useMediaPermissions({
     let micGranted = micPermission === "granted";
     let camGranted = cameraPermission === "granted";
 
-    // 1. Try requesting combined stream
+    // 1. Try requesting combined stream (standard web)
     try {
       const combinedStream = await navigator.mediaDevices.getUserMedia({
         audio: true,
@@ -274,7 +273,7 @@ export function useMediaPermissions({
       camGranted = true;
       if (onMicGranted) onMicGranted();
     } catch {
-      // 2. If combined fails (very common on iOS Safari), request individually
+      // 2. If combined fails, request sequentially
       if (!micGranted) {
         try {
           const audioStream = await navigator.mediaDevices.getUserMedia({
@@ -310,12 +309,12 @@ export function useMediaPermissions({
       setPermissionRequestError(null);
     } else {
       const missing: string[] = [];
-      if (!micGranted) missing.push("Mikrofon");
-      if (!camGranted) missing.push("Kamera");
+      if (!micGranted) missing.push("Microphone");
+      if (!camGranted) missing.push("Camera");
       setPermissionRequestError(
-        `Akses ${missing.join(
+        `${missing.join(
           " & "
-        )} belum diizinkan. Silakan klik "Izinkan" pada popup browser atau buka Pengaturan iPhone > Safari > Izinkan akses mikrofon/kamera.`
+        )} access has not been granted yet. Please click "Allow" on the browser popup or enable permissions in iPhone Settings > Safari > Microphone & Camera.`
       );
     }
   }, [cameraPermission, facingMode, isInsecureContext, micPermission, onMicGranted]);

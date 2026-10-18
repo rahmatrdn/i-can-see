@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Mic, Camera, CheckCircle2, AlertTriangle, HelpCircle, X, ExternalLink } from "lucide-react";
+import { Mic, Camera, CheckCircle2, AlertTriangle, HelpCircle, X } from "lucide-react";
 import { DevicePermissionState } from "../../../types/assistant";
 
 interface PermissionModalProps {
@@ -10,8 +10,6 @@ interface PermissionModalProps {
   permissionRequestError: string | null;
   isInsecureContext?: boolean;
   onRequestPermissions: () => void;
-  onRequestMicOnly?: () => void;
-  onRequestCameraOnly?: () => void;
   onClose?: () => void;
 }
 
@@ -23,8 +21,6 @@ export const PermissionModal: React.FC<PermissionModalProps> = ({
   permissionRequestError,
   isInsecureContext = false,
   onRequestPermissions,
-  onRequestMicOnly,
-  onRequestCameraOnly,
   onClose,
 }) => {
   const [showIphoneHelp, setShowIphoneHelp] = useState<boolean>(false);
@@ -51,7 +47,7 @@ export const PermissionModal: React.FC<PermissionModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            aria-label="Tutup dialog izin"
+            aria-label="Close permission dialog"
             className="absolute top-4 right-4 p-1.5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
@@ -88,15 +84,15 @@ export const PermissionModal: React.FC<PermissionModalProps> = ({
             id="permission-modal-title"
             className="text-lg font-extrabold tracking-tight text-[#233053]"
           >
-            Izin Mikrofon &amp; Kamera
+            Allow Microphone &amp; Camera
           </h2>
           <p
             id="permission-modal-desc"
             className="text-xs text-slate-600 leading-relaxed"
           >
-            <strong>iCanSee</strong> memerlukan akses <strong>Mikrofon</strong>{" "}
-            untuk mendengarkan pertanyaan suara dan <strong>Kamera</strong> untuk
-            menganalisis objek di sekitar Anda.
+            <strong>iCanSee</strong> requires access to your{" "}
+            <strong>Microphone</strong> for voice questions and{" "}
+            <strong>Camera</strong> to capture and describe objects in front of you.
           </p>
         </div>
 
@@ -105,11 +101,11 @@ export const PermissionModal: React.FC<PermissionModalProps> = ({
           <div className="rounded-xl bg-amber-50 border border-amber-300 p-3 text-left space-y-1">
             <div className="flex items-center gap-1.5 text-amber-800 font-bold text-xs">
               <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" />
-              <span>Penting untuk Pengguna iPhone:</span>
+              <span>Important for iPhone / Safari Users:</span>
             </div>
             <p className="text-[11px] text-amber-900 leading-relaxed">
-              Safari di iOS <strong>memblokir mikrofon pada HTTP biasa</strong>.
-              Untuk memunculkan popup izin di iPhone, buka melalui <strong>HTTPS</strong> atau gunakan tunnel seperti <code>ngrok</code> / <code>cloudflared</code>.
+              iOS Safari <strong>strictly blocks media access on plain HTTP</strong>.
+              To display the permission prompt on iPhone, open this app over <strong>HTTPS</strong> or use a secure tunnel such as <code>ngrok</code> or <code>cloudflared</code>.
             </p>
           </div>
         )}
@@ -119,7 +115,7 @@ export const PermissionModal: React.FC<PermissionModalProps> = ({
           <div className="flex items-center justify-between text-xs">
             <span className="flex items-center gap-2 font-bold text-[#233053]">
               <Mic className="w-4 h-4 text-[#517DA8]" />
-              Akses Mikrofon
+              Microphone Access
             </span>
             <span
               className={`font-mono text-[11px] font-semibold px-2 py-0.5 rounded-full ${
@@ -131,10 +127,10 @@ export const PermissionModal: React.FC<PermissionModalProps> = ({
               }`}
             >
               {isMicGranted
-                ? "Diizinkan ✓"
+                ? "Allowed ✓"
                 : isMicBlocked
-                ? "Diblokir ✕"
-                : "Belum Diizinkan"}
+                ? "Blocked ✕"
+                : "Not Allowed Yet"}
             </span>
           </div>
 
@@ -143,7 +139,7 @@ export const PermissionModal: React.FC<PermissionModalProps> = ({
           <div className="flex items-center justify-between text-xs">
             <span className="flex items-center gap-2 font-bold text-[#233053]">
               <Camera className="w-4 h-4 text-[#517DA8]" />
-              Akses Kamera
+              Camera Access
             </span>
             <span
               className={`font-mono text-[11px] font-semibold px-2 py-0.5 rounded-full ${
@@ -155,10 +151,10 @@ export const PermissionModal: React.FC<PermissionModalProps> = ({
               }`}
             >
               {isCamGranted
-                ? "Diizinkan ✓"
+                ? "Allowed ✓"
                 : isCamBlocked
-                ? "Diblokir ✕"
-                : "Belum Diizinkan"}
+                ? "Blocked ✕"
+                : "Not Allowed Yet"}
             </span>
           </div>
         </div>
@@ -183,87 +179,59 @@ export const PermissionModal: React.FC<PermissionModalProps> = ({
             <HelpCircle className="w-4 h-4" />
             <span>
               {showIphoneHelp
-                ? "Sembunyikan panduan iPhone"
-                : "Panduan jika izin tidak muncul di iPhone"}
+                ? "Hide iPhone Safari guide"
+                : "If permissions are blocked on iPhone Safari"}
             </span>
           </button>
 
           {showIphoneHelp && (
             <div className="mt-2 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 space-y-1.5">
-              <p className="font-bold text-[#233053]">Cara mengizinkan di Safari iOS:</p>
+              <p className="font-bold text-[#233053]">How to allow in iOS Safari:</p>
               <ol className="list-decimal list-inside space-y-1 text-[11px] leading-relaxed text-slate-600">
                 <li>
-                  Ketuk ikon <strong>"aA"</strong> di sebelah kiri bilah URL Safari.
+                  Tap the <strong>"aA"</strong> icon on the left of the Safari URL bar.
                 </li>
                 <li>
-                  Pilih <strong>"Pengaturan Situs Web"</strong> (Website Settings).
+                  Select <strong>"Website Settings"</strong>.
                 </li>
                 <li>
-                  Ubah <strong>Mikrofon</strong> dan <strong>Kamera</strong> menjadi <strong>"Izinkan"</strong> (Allow).
+                  Set both <strong>Microphone</strong> and <strong>Camera</strong> to <strong>"Allow"</strong>.
                 </li>
                 <li>
-                  Muat ulang (refresh) halaman.
+                  Reload the webpage.
                 </li>
               </ol>
               <p className="text-[10px] text-slate-500 pt-1">
-                Atau melalui <strong>Pengaturan iPhone &gt; Safari &gt; Mikrofon &gt; Izinkan</strong>.
+                Or via <strong>iPhone Settings &gt; Safari &gt; Microphone / Camera &gt; Allow</strong>.
               </p>
             </div>
           )}
         </div>
 
-        {/* Action Buttons */}
+        {/* Action Button: Single combined button requesting both */}
         <div className="space-y-2 pt-1">
-          {/* Main button: Request Both */}
           <button
             type="button"
             disabled={isRequestingAccess}
             onClick={onRequestPermissions}
-            className="w-full min-h-[46px] py-2.5 px-4 rounded-2xl bg-[#233053] hover:bg-[#354C6E] active:scale-[0.98] disabled:opacity-60 text-white font-extrabold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full min-h-[48px] py-3 px-5 rounded-2xl bg-[#233053] hover:bg-[#354C6E] active:scale-[0.98] disabled:opacity-60 text-white font-extrabold text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <CheckCircle2 className="w-4 h-4 text-[#72ADD9]" />
             <span>
               {isRequestingAccess
-                ? "Meminta Izin Browser..."
-                : "Izinkan Mikrofon & Kamera"}
+                ? "Requesting Browser Access..."
+                : "Allow Microphone & Camera"}
             </span>
           </button>
 
-          {/* Individual Requests: Allows iPhone user to directly isolate and trigger microphone */}
-          <div className="grid grid-cols-2 gap-2">
-            {onRequestMicOnly && (
-              <button
-                type="button"
-                disabled={isRequestingAccess || isMicGranted}
-                onClick={onRequestMicOnly}
-                className="py-2 px-3 rounded-xl border border-[#517DA8]/30 bg-[#F0F7FF] hover:bg-[#E0EFFE] text-[#233053] text-xs font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <Mic className="w-3.5 h-3.5 text-[#517DA8]" />
-                <span>{isMicGranted ? "Mikrofon OK" : "Izin Mic Saja"}</span>
-              </button>
-            )}
-
-            {onRequestCameraOnly && (
-              <button
-                type="button"
-                disabled={isRequestingAccess || isCamGranted}
-                onClick={onRequestCameraOnly}
-                className="py-2 px-3 rounded-xl border border-slate-300 bg-slate-50 hover:bg-slate-100 text-[#233053] text-xs font-bold transition-all disabled:opacity-50 flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <Camera className="w-3.5 h-3.5 text-slate-600" />
-                <span>{isCamGranted ? "Kamera OK" : "Izin Kamera Saja"}</span>
-              </button>
-            )}
-          </div>
-
-          {/* Dismiss button if user wants to proceed or test */}
+          {/* Dismiss button */}
           {onClose && (
             <button
               type="button"
               onClick={onClose}
               className="text-xs text-slate-500 hover:text-slate-700 underline font-medium pt-1 cursor-pointer block mx-auto"
             >
-              Lanjutkan Tanpa Izin Sekarang
+              Continue for Now
             </button>
           )}
         </div>

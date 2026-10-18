@@ -72,7 +72,7 @@ export const StatusBanner: React.FC<StatusBannerProps> = ({
             <span className="leading-snug">{micError}</span>
           </div>
           <span className="shrink-0 text-[11px] font-bold text-rose-700 bg-white px-2 py-1 rounded-lg border border-rose-200">
-            Izinkan Mic ❯
+            Allow Mic ❯
           </span>
         </div>
       )}

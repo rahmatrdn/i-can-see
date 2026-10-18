@@ -869,7 +869,7 @@ export function useAssistantController() {
       } catch (err: any) {
         console.warn("Microphone getUserMedia warning:", err);
         setMicError(
-          "Izin mikrofon belum aktif. Di iPhone: Buka Pengaturan iPhone > Safari > Mikrofon > Izinkan."
+          "Microphone permission is not enabled. On iPhone: Go to iPhone Settings > Safari > Microphone > Allow."
         );
         setStatusMessage("Microphone Permission Needed");
         return;
@@ -1155,7 +1155,7 @@ export function useAssistantController() {
     } catch (err: any) {
       console.warn("triggerMicrophonePermissionRequest err:", err);
       setMicError(
-        "Izin mikrofon belum aktif. Di iPhone: Buka Pengaturan iPhone > Safari > Mikrofon > Izinkan."
+        "Microphone permission is not enabled. On iPhone: Go to iPhone Settings > Safari > Microphone > Allow."
       );
       return false;
     }
